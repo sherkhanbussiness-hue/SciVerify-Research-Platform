@@ -5,9 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
+    "dev:tsx": "tsx src/index.ts",
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "verify": "tsx src/verify-harness.ts"
   },
   "dependencies": {
     "@workspace/api-zod": "workspace:*",
@@ -27,6 +29,7 @@
     "esbuild": "0.28.1",
     "esbuild-plugin-pino": "^2.3.3",
     "pino-pretty": "^13.1.3",
+    "tsx": "catalog:",
     "thread-stream": "3.1.0"
   }
 }
