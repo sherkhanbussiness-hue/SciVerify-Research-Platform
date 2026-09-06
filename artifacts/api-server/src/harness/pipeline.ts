@@ -2,6 +2,7 @@ import { generateCode } from "./agent";
 import { getFixture } from "./fixtures";
 import { gradeFixture } from "./grader";
 import { runSandboxed } from "./sandbox";
+import { validateScriptSecurity } from "./security";
 import { saveResult } from "./store";
 import { logger } from "../lib/logger";
 import type { FixtureRunResult } from "./types";
@@ -35,6 +36,32 @@ export async function runFixtureById(id: string): Promise<FixtureRunResult> {
       output: null,
       latency_ms: Date.now() - wallStart,
       generated_code: null,
+      stdout: "",
+      stderr: "",
+      exit_code: null,
+      timed_out: false,
+      crashed: false,
+      execution_time_ms: 0,
+      model,
+    });
+  }
+
+  const securityCheck = validateScriptSecurity(generated_code);
+  if (!securityCheck.valid) {
+    const message = `Script rejected for security violation: ${securityCheck.reason ?? "forbidden system or network operations detected"}`;
+    logger.warn(
+      { fixture_id: fixture.id, kind: "security_violation", stage: "security_validator", message },
+      "security violation: generated code failed security validation",
+    );
+    return saveResult({
+      fixture_id: fixture.id,
+      subdomain: fixture.subdomain,
+      ran: false,
+      correct: null,
+      error: message,
+      output: null,
+      latency_ms: Date.now() - wallStart,
+      generated_code,
       stdout: "",
       stderr: "",
       exit_code: null,

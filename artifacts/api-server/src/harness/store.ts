@@ -48,7 +48,7 @@ export function summarizeResults(): ResultsSummary {
       fixture_id,
       runs: subset.length,
       execution_success_rate: ran / subset.length,
-      accuracy_rate: subset.length ? correct / subset.length : null,
+      accuracy_rate: ran > 0 ? correct / ran : null,
       average_latency_ms: subset.length ? latency / subset.length : null,
     };
   });
@@ -56,7 +56,7 @@ export function summarizeResults(): ResultsSummary {
   const summary: ResultsSummary = {
     total_runs,
     execution_success_rate: ranCount / total_runs,
-    accuracy_rate: correctCount / total_runs,
+    accuracy_rate: ranCount > 0 ? correctCount / ranCount : null,
     average_latency_ms: latencySum / total_runs,
     per_fixture,
   };

@@ -1,6 +1,7 @@
 import { runSandboxed } from "./harness/sandbox";
 import { FIXTURES } from "./harness/fixtures";
 import { gradeFixture } from "./harness/grader";
+import { validateScriptSecurity } from "./harness/security";
 import { readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 
@@ -47,8 +48,8 @@ async function runPhaseETests() {
   console.log(`- ran: ${malformedGrade.ran}, correct: ${malformedGrade.correct}, error: ${malformedGrade.error} => ${passMalformed ? "PASS" : "FAIL"}`);
   results["malformed_output"] = passMalformed;
 
-  // 5. Security & Isolation test: Network attempt
-  console.log("\nTest 5: Network Access Attempt in Script");
+  // 5. Security & Isolation test: Network attempt (assert import-level rejection)
+  console.log("\nTest 5: Network Access Attempt in Script (Security Check Rejection)");
   const netCode = `
 try:
     import urllib.request
@@ -57,12 +58,27 @@ except Exception as e:
     import json
     print(json.dumps({"value": 0, "net_error": str(type(e).__name__)}))
 `;
-  const netCapture = await runSandboxed(netCode, 5000);
-  const netGrade = gradeFixture(FIXTURES[0], netCapture);
-  // Main server process must remain alive, script executes in isolated child process
-  const passNet = typeof netCapture.exit_code === "number";
-  console.log(`- sandbox completed cleanly (exit ${netCapture.exit_code}), server process intact => ${passNet ? "PASS" : "FAIL"}`);
-  results["network_access_handled"] = passNet;
+  const netSecurityCheck = validateScriptSecurity(netCode);
+  const passNet = !netSecurityCheck.valid;
+  console.log(`- network import rejected by security check: valid=${netSecurityCheck.valid}, reason="${netSecurityCheck.reason}" => ${passNet ? "PASS" : "FAIL"}`);
+  results["network_access_rejected"] = passNet;
+
+  // 5b. Security & Isolation test: Filesystem write attempt
+  console.log("\nTest 5b: Filesystem Write Attempt in Script (Security Check Rejection)");
+  const fsCode = `
+try:
+    with open("unauthorized_write.txt", "w") as f:
+        f.write("malicious payload")
+    import json
+    print(json.dumps({"value": 0, "fs_write": "success"}))
+except Exception as e:
+    import json
+    print(json.dumps({"value": 0, "fs_error": str(type(e).__name__)}))
+`;
+  const fsSecurityCheck = validateScriptSecurity(fsCode);
+  const passFs = !fsSecurityCheck.valid;
+  console.log(`- filesystem write rejected by security check: valid=${fsSecurityCheck.valid}, reason="${fsSecurityCheck.reason}" => ${passFs ? "PASS" : "FAIL"}`);
+  results["filesystem_access_blocked"] = passFs;
 
   // 6. Numeric edge cases: NaN, Infinity, -0, Extreme Floats
   console.log("\nTest 6: Numeric Edge Cases");
