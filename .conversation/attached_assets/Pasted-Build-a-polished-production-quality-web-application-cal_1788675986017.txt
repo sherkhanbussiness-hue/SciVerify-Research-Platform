@@ -1,0 +1,1046 @@
+Build a polished, production-quality web application called **SciVerify — Scientific Code-Execution Reliability Harness**.
+
+I am building SciVerify as an AI-for-Science research project. The purpose of the platform is to evaluate whether AI agents can solve scientific problems by generating executable Python code, successfully executing that code, producing scientifically valid results, and doing so reproducibly.
+
+This is NOT a generic AI chatbot.
+
+The application should look and feel like a serious **AI research/evaluation platform**, similar in quality and visual sophistication to modern products such as Linear, Vercel, OpenAI research tooling, Anthropic Console, Weights & Biases, and modern observability platforms.
+
+I have attached a visual reference image named:
+
+**SciVerify UI Reference**
+
+Use this image as the primary visual inspiration for the interface, layout, typography, spacing, dashboard structure, cards, charts, navigation and overall aesthetic.
+
+Do NOT simply copy the image.
+Use it as a design reference and create a coherent, responsive implementation.
+
+==================================================
+CORE PRODUCT
+============
+
+SciVerify evaluates AI-generated scientific code.
+
+The basic workflow is:
+
+User selects a scientific task
+↓
+AI agent receives task
+↓
+Agent generates Python code
+↓
+Code is executed in a controlled environment
+↓
+Execution success/failure is recorded
+↓
+Generated output is compared with reference answer
+↓
+Scientific correctness is evaluated
+↓
+Metrics are calculated
+↓
+Results are stored
+↓
+User can inspect code, logs, outputs and visualizations
+
+The central question is:
+
+**"Can an AI agent produce scientific code that actually works and produces a correct, reproducible result?"**
+
+==================================================
+TECHNOLOGY
+==========
+
+Use:
+
+Frontend:
+
+* React
+* TypeScript
+* Tailwind CSS
+* shadcn/ui
+* Lucide React icons
+* Recharts for charts
+* React Router if routing is required
+
+Backend:
+
+* Use a clean API architecture.
+* If Python backend is appropriate, use FastAPI.
+* Keep AI/model execution logic modular.
+* Do NOT hardcode API keys.
+
+Data:
+
+* Start with local/mock data so the application works immediately.
+* Structure the application so PostgreSQL can be added later.
+* Create clear TypeScript interfaces/types for all entities.
+
+AI:
+Create an abstraction layer for model providers.
+
+Example:
+
+ModelProvider
+├── OpenAIProvider
+├── AnthropicProvider
+├── GeminiProvider
+└── MockProvider
+
+For the initial implementation, the MockProvider should allow the complete application to function without requiring an API key.
+
+==================================================
+DESIGN SYSTEM
+=============
+
+Use a sophisticated dark scientific/research aesthetic.
+
+Primary characteristics:
+
+* Dark background
+* Deep navy/black surfaces
+* Subtle blue/violet accents
+* High-quality typography
+* Thin borders
+* Soft shadows
+* Moderate glassmorphism
+* Excellent spacing
+* Rounded but not excessively rounded cards
+* Minimal gradients
+* Professional data visualization
+* Subtle animations
+* Strong visual hierarchy
+
+Avoid:
+
+* Excessive neon
+* Excessive glowing effects
+* Cartoonish AI graphics
+* Generic purple AI landing pages
+* Huge unnecessary gradients
+* Excessive rounded cards
+* Emoji-based UI
+* Stock-photo-heavy design
+
+The interface should look like a serious scientific computing and AI evaluation platform.
+
+Use responsive design from the beginning.
+
+Desktop should be the primary experience, but the application must remain usable on tablets and mobile.
+
+==================================================
+BRAND
+=====
+
+Product name:
+
+**SciVerify**
+
+Tagline:
+
+**Evaluating AI for a more reliable scientific future.**
+
+Create a simple scientific logo combining an atom/orbit concept with a subtle verification/check concept.
+
+Use the logo consistently throughout the application.
+
+==================================================
+GLOBAL NAVIGATION
+=================
+
+Create a persistent sidebar on the main dashboard.
+
+Navigation:
+
+Overview
+Tasks
+Run Evaluation
+Results
+Model Comparison
+Datasets
+Reports
+Documentation
+Settings
+
+Sidebar should include:
+
+SciVerify logo
+Navigation items
+Current project/workspace
+User profile section
+
+At the bottom display:
+
+"Sher"
+"Student Researcher"
+
+==================================================
+PAGE 1 — LANDING PAGE
+=====================
+
+Create a polished landing page.
+
+Hero:
+
+"Verify AI for Real Science."
+
+Supporting text:
+
+"SciVerify is a scientific code-execution reliability harness that tests how well AI agents solve scientific problems through executable code, verifiable results, and reproducible experiments."
+
+Primary CTA:
+
+"Try a Demo"
+
+Secondary CTA:
+
+"View on GitHub"
+
+Hero visual:
+
+Create a sophisticated scientific visualization showing Earth/orbit/scientific computing concepts.
+
+Do not make the hero overly flashy.
+
+Below the hero show three or four statistics:
+
+5
+Task Fixtures
+
+6
+Scientific Domains
+
+100%
+Reproducible
+
+Then add sections:
+
+How SciVerify Works
+
+1. Give AI a scientific problem
+2. Generate executable code
+3. Execute the code
+4. Validate the output
+5. Compare against reference
+6. Analyze reliability
+
+Add a section:
+
+"Why Code Execution Matters"
+
+Explain that generating plausible scientific code is not enough. The code must execute and produce correct results.
+
+==================================================
+PAGE 2 — OVERVIEW DASHBOARD
+===========================
+
+Create a professional analytics dashboard.
+
+Header:
+
+"Evaluation Overview"
+
+Subheading:
+
+"Track the performance and reliability of AI agents on real scientific problems."
+
+Top-right:
+
+Current date
+"Run New Evaluation" button
+
+Metric cards:
+
+Average Accuracy
+33.4%
+
+Code Execution Failure
+58.0%
+
+Scientific Tasks
+5
+
+Models Evaluated
+3
+
+Important:
+
+These values are demonstration/mock values.
+
+Clearly structure the code so they can later be replaced by real backend metrics.
+
+Create charts:
+
+1. Performance by Model
+
+Compare:
+
+GPT
+Claude
+Gemini
+
+Metrics:
+
+Execution Success
+Execution Failure
+Scientific Accuracy
+
+2. Task Domains
+
+Show distribution of tasks:
+
+Physics
+Earth Science
+Astronomy
+Climate Science
+Scientific Data Analysis
+
+3. Recent Evaluations
+
+Table columns:
+
+Task
+Model
+Status
+Accuracy
+Execution Time
+Date
+
+Example statuses:
+
+Success
+Failed
+Partial
+
+Add Quick Actions:
+
+Run New Evaluation
+Browse Datasets
+View Documentation
+Explore Examples
+
+==================================================
+PAGE 3 — SCIENTIFIC TASKS
+=========================
+
+Create a task browser.
+
+Title:
+
+"Scientific Tasks"
+
+Subtitle:
+
+"Curated scientific problems with verifiable solutions."
+
+Filters:
+
+All
+Physics
+Earth Science
+Astronomy
+Climate
+Data Analysis
+
+Create task cards.
+
+Initial example tasks:
+
+1. Orbital Trajectory Simulation
+   Domain: Physics
+   Language: Python
+   Difficulty: Intermediate
+
+2. Gravitational Force Calculation
+   Domain: Physics
+   Language: Python
+   Difficulty: Beginner
+
+3. NOAA Climate Data Analysis
+   Domain: Earth Science
+   Language: Python
+   Difficulty: Intermediate
+
+4. Exoplanet Transit Detection
+   Domain: Astronomy
+   Language: Python
+   Difficulty: Advanced
+
+5. Glacier Melt Analysis
+   Domain: Climate
+   Language: Python
+   Difficulty: Intermediate
+
+Each card should show:
+
+Task name
+Scientific domain
+Short description
+Difficulty
+Python icon
+Reference solution available
+"View Task" button
+
+==================================================
+PAGE 4 — TASK DETAIL
+====================
+
+When the user opens a task, show:
+
+Task title
+Domain
+Difficulty
+Expected runtime
+
+Scientific Problem
+
+Clearly display the scientific question.
+
+Example:
+
+"Simulate the trajectory of a satellite around Earth using Newtonian gravitational dynamics and calculate its orbital period."
+
+Then:
+
+Expected Inputs
+
+Expected Outputs
+
+Reference Method
+
+Reference Answer
+
+Evaluation Criteria
+
+Execution Constraints
+
+Dataset information
+
+Buttons:
+
+Run Evaluation
+View Reference Solution
+
+==================================================
+PAGE 5 — RUN EVALUATION
+=======================
+
+Create a multi-step evaluation interface.
+
+Step indicator:
+
+1. Select Task
+2. Configure
+3. Execute
+4. Results
+
+Task selector.
+
+Model selector:
+
+GPT
+Claude
+Gemini
+Mock Agent
+
+Configuration:
+
+Temperature
+Maximum tokens
+Execution timeout
+Number of attempts
+
+Primary button:
+
+"Run Evaluation"
+
+When running, show an animated execution state.
+
+Example execution log:
+
+Initializing evaluation environment...
+Loading task...
+Sending scientific problem to agent...
+Generating Python code...
+Validating generated code...
+Starting execution...
+Running scientific computation...
+Checking output...
+Comparing against reference...
+Calculating metrics...
+Evaluation complete.
+
+Show elapsed time.
+
+==================================================
+PAGE 6 — GENERATED CODE VIEWER
+==============================
+
+Create a professional code viewer.
+
+Use syntax highlighting.
+
+Header:
+
+Generated Python Code
+
+Controls:
+
+Copy
+Download
+Run Again
+
+Display realistic Python scientific code.
+
+Example technologies:
+
+numpy
+scipy
+matplotlib
+pandas
+
+Show:
+
+Lines of code
+Execution status
+Runtime
+Warnings
+
+Also provide tabs:
+
+Generated Code
+Reference Code
+Diff
+
+The Diff view should visually show differences between generated and reference implementations.
+
+==================================================
+PAGE 7 — EXECUTION LOG
+======================
+
+Create a terminal-style execution panel.
+
+Display:
+
+Environment initialized
+Python version
+Packages loaded
+Code executed
+stdout
+stderr
+Warnings
+Runtime
+Exit code
+
+Example:
+
+Python 3.12
+NumPy 2.x
+SciPy
+Matplotlib
+
+Successful execution:
+
+Exit Code: 0
+
+Failed execution:
+
+Exit Code: 1
+
+Use clear success/error states.
+
+==================================================
+PAGE 8 — RESULTS
+================
+
+Create a detailed evaluation results page.
+
+Top status:
+
+✓ Execution Successful
+
+or
+
+✕ Execution Failed
+
+Metrics:
+
+Scientific Accuracy
+92.3%
+
+Execution Time
+12.4s
+
+Code Length
+48 lines
+
+Test Cases
+5/5
+
+Then tabs:
+
+Overview
+Generated Code
+Outputs
+Visualizations
+Analysis
+Execution Logs
+
+Visualization area should display scientific plots.
+
+For example:
+
+Satellite Orbital Trajectory
+
+Show a realistic matplotlib-style orbital plot.
+
+Other possible visualizations:
+
+* gravitational potential
+* temperature trend
+* climate anomaly
+* orbital trajectory
+* regression curve
+* scientific distribution
+
+==================================================
+PAGE 9 — MODEL COMPARISON
+=========================
+
+Create a serious benchmarking dashboard.
+
+Compare multiple AI models.
+
+Table:
+
+Model
+Tasks
+Execution Success
+Scientific Accuracy
+Average Runtime
+Failure Rate
+Overall Score
+
+Example:
+
+GPT
+Claude
+Gemini
+Open-source Model
+
+Create charts for:
+
+Execution reliability
+Scientific accuracy
+Runtime
+Failure categories
+
+Add a leaderboard.
+
+Do not make unsupported claims.
+All numbers are clearly marked as demo data until connected to real evaluations.
+
+==================================================
+PAGE 10 — DATASETS
+==================
+
+Create a dataset management page.
+
+Show:
+
+Dataset name
+Domain
+Records
+Source
+License
+Version
+Last updated
+
+Example datasets:
+
+NASA Orbital Data
+NOAA Climate Data
+Synthetic Physics Fixtures
+
+Dataset cards should include:
+
+Source
+Description
+License
+Download/View button
+
+==================================================
+PAGE 11 — REPORTS
+=================
+
+Create an evaluation report interface.
+
+Report sections:
+
+Executive Summary
+Task Performance
+Execution Reliability
+Scientific Accuracy
+Failure Analysis
+Model Comparison
+Limitations
+Reproducibility Information
+
+Allow:
+
+Export Report
+Download Results
+
+==================================================
+PAGE 12 — FAILURE ANALYSIS
+==========================
+
+This is an IMPORTANT part of the application.
+
+SciVerify should not only report success/failure.
+
+It should categorize failures.
+
+Create failure categories:
+
+1. Syntax Error
+2. Runtime Error
+3. Dependency Error
+4. Timeout
+5. Numerical Error
+6. Wrong Scientific Method
+7. Incorrect Output
+8. Data Handling Error
+9. Visualization Error
+10. Non-Reproducible Result
+
+Create charts showing the distribution of failure types.
+
+Create a "Failure Analysis" table:
+
+Task
+Model
+Failure Type
+Error
+Severity
+Resolution
+
+This page should communicate that SciVerify is a research/evaluation system rather than merely a demo.
+
+==================================================
+PAGE 13 — REPRODUCIBILITY
+=========================
+
+Create a reproducibility panel.
+
+Show:
+
+Python Version
+Package Versions
+Random Seed
+Dataset Version
+Model
+Prompt Version
+Execution Environment
+Execution Timestamp
+
+Display:
+
+"Reproducibility Status"
+
+✓ Dataset pinned
+✓ Random seed recorded
+✓ Environment recorded
+✓ Model recorded
+✓ Prompt recorded
+
+This is an important differentiator of the project.
+
+==================================================
+PAGE 14 — DOCUMENTATION
+=======================
+
+Create clean documentation pages.
+
+Sections:
+
+Introduction
+Architecture
+Evaluation Methodology
+Task Fixtures
+Execution Sandbox
+Metrics
+Datasets
+Reproducibility
+Failure Taxonomy
+API
+Contributing
+
+Use clean technical documentation styling.
+
+==================================================
+DATA MODEL
+==========
+
+Create appropriate TypeScript types/interfaces.
+
+Example:
+
+ScientificTask
+
+EvaluationRun
+
+Model
+
+Dataset
+
+ExecutionResult
+
+ScientificResult
+
+FailureAnalysis
+
+EvaluationMetric
+
+ReferenceAnswer
+
+ReproducibilityMetadata
+
+Do not use "any" everywhere.
+
+Use strongly typed structures.
+
+==================================================
+MOCK DATA
+=========
+
+Create realistic mock data for:
+
+5 scientific tasks
+3 models
+10+ evaluation runs
+execution logs
+failure cases
+scientific metrics
+datasets
+reports
+
+The application must look populated immediately after starting it.
+
+==================================================
+INTERACTIONS
+============
+
+Buttons should actually work.
+
+Examples:
+
+"Run New Evaluation"
+→ opens evaluation workflow
+
+"View Task"
+→ opens task detail
+
+"View Results"
+→ opens result page
+
+"Model Comparison"
+→ opens benchmarking dashboard
+
+"Browse Datasets"
+→ opens datasets
+
+Sidebar navigation must work.
+
+Tabs must work.
+
+Filters must work.
+
+Tables should support sorting where appropriate.
+
+Charts should use real data from the application's data layer.
+
+==================================================
+ANIMATION
+=========
+
+Use subtle animations.
+
+Examples:
+
+* Sidebar transitions
+* Page transitions
+* Metric card entrance
+* Chart loading
+* Evaluation execution animation
+* Status indicators
+* Progress indicators
+
+Do NOT over-animate.
+
+The interface should feel professional and fast.
+
+==================================================
+ACCESSIBILITY
+=============
+
+Implement:
+
+* keyboard navigation
+* semantic HTML
+* accessible buttons
+* sufficient contrast
+* visible focus states
+* meaningful labels
+* responsive layout
+
+==================================================
+CODE QUALITY
+============
+
+Organize the project professionally.
+
+Use components such as:
+
+components/
+layout/
+dashboard/
+evaluation/
+tasks/
+results/
+charts/
+code/
+datasets/
+reports/
+ui/
+
+lib/
+api/
+models/
+utils/
+mock-data/
+
+pages/
+
+types/
+
+Keep components reusable.
+
+Avoid huge monolithic components.
+
+Avoid duplicated code.
+
+Avoid hardcoded values scattered throughout the application.
+
+==================================================
+IMPORTANT PRODUCT PRINCIPLE
+===========================
+
+SciVerify is ultimately an evaluation/research platform.
+
+The UI must therefore emphasize:
+
+RELIABILITY
+EXECUTION
+SCIENTIFIC CORRECTNESS
+REPRODUCIBILITY
+FAILURE ANALYSIS
+BENCHMARKING
+
+rather than simply emphasizing AI generation.
+
+The user should immediately understand:
+
+"AI generated this scientific code — SciVerify tests whether it actually works."
+
+==================================================
+IMPLEMENTATION STRATEGY
+=======================
+
+Build the project in stages.
+
+PHASE 1:
+Create the complete frontend shell and routing.
+
+PHASE 2:
+Implement all dashboard pages with realistic mock data.
+
+PHASE 3:
+Implement task selection and evaluation workflow.
+
+PHASE 4:
+Implement code viewer and execution log UI.
+
+PHASE 5:
+Implement results and visualization interfaces.
+
+PHASE 6:
+Implement model comparison and failure analysis.
+
+PHASE 7:
+Create backend/API abstraction.
+
+PHASE 8:
+Connect actual AI model APIs.
+
+PHASE 9:
+Implement controlled Python execution.
+
+PHASE 10:
+Implement real scientific task fixtures and evaluation metrics.
+
+Do not attempt to build everything as one giant component.
+
+==================================================
+CRITICAL SAFETY / EXECUTION REQUIREMENT
+=======================================
+
+Never execute arbitrary AI-generated Python code directly on the main application server without isolation.
+
+The eventual execution system must be designed around a sandbox/containerized execution environment with:
+
+* resource limits
+* timeout
+* restricted filesystem
+* restricted network access
+* controlled dependencies
+* process isolation
+
+For the initial Replit prototype, use simulated/mock execution results instead of executing arbitrary generated code.
+
+Clearly separate:
+
+Demo execution
+
+from
+
+Production sandbox execution.
+
+==================================================
+FINAL QUALITY BAR
+=================
+
+Before considering the project complete, verify:
+
+* No broken routes
+* No empty pages
+* No placeholder lorem ipsum
+* No dead buttons
+* No console errors
+* No TypeScript errors
+* Responsive layout
+* Consistent typography
+* Consistent spacing
+* Consistent component design
+* Charts render correctly
+* Navigation works
+* Mock evaluation workflow works from beginning to end
+* Results page looks convincing
+* Code viewer works
+* Failure analysis works
+
+The final application should feel like a **real scientific AI evaluation platform**, not a student dashboard template.
+
+Prioritize polish, clarity, scientific credibility and usability.
+
+Start by creating the application architecture and the complete frontend shell, then progressively implement the pages and interactions.
