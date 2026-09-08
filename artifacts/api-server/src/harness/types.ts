@@ -68,6 +68,20 @@ export interface FixtureRunResult {
   execution_time_ms: number;
   created_at: string;
   model: string;
+  /** Which provider produced the code (e.g. "openai", "groq", "stub-agent"). Optional for backward compat with old stored results. */
+  provider?: string;
+  /** Number of retries attempted after the initial attempt (0 = first attempt succeeded or failed with no retry). */
+  retry_count?: number;
+  /** Whether the very first attempt (before any retry) produced a correct answer. */
+  first_attempt_correct?: boolean | null;
+  /** Whether the final attempt (after all retries) produced a correct answer. Mirrors `correct` for convenience. */
+  final_correct?: boolean | null;
+  /** Self-reported confidence score from the agent (0–100). Present only when the agent includes a "confidence" key in its JSON output. */
+  self_reported_confidence?: number;
+  /** Whether retrieval-grounded generation was used for this run. */
+  retrieval_used?: boolean;
+  /** List of retrieved context snippets injected into the prompt. */
+  retrieved_context?: string[];
 }
 
 export interface ResultsSummary {

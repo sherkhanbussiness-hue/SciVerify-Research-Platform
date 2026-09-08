@@ -4,10 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
+    "dev": "pnpm run build && node --enable-source-maps ./start-dev.mjs",
     "dev:tsx": "tsx src/index.ts",
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
+    "start:dev": "node -e \"process.env.PORT=process.env.PORT||'3001'; import('./dist/index.mjs')\"",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "verify": "tsx src/verify-harness.ts"
   },

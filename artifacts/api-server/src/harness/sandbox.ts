@@ -90,6 +90,22 @@ export function numericFromOutput(output: unknown): number | null {
   return extractNumeric(output);
 }
 
+/**
+ * Extracts the optional `confidence` field from parsed agent output.
+ * The agent is prompted to emit {"value": <number>, "confidence": <0-100>}.
+ * Returns null if the field is absent or not a valid finite number in [0, 100].
+ */
+export function confidenceFromOutput(output: unknown): number | null {
+  if (!output || typeof output !== "object") return null;
+  const record = output as Record<string, unknown>;
+  const raw = record["confidence"];
+  if (typeof raw !== "number") return null;
+  if (!Number.isFinite(raw)) return null;
+  // Clamp to valid range
+  if (raw < 0 || raw > 100) return null;
+  return raw;
+}
+
 export async function runSandboxed(
   code: string,
   timeoutMs = DEFAULT_TIMEOUT_MS,

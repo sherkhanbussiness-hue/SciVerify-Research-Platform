@@ -408,7 +408,7 @@ print(json.dumps({"value": 1 if leaked else 0, "leaked": leaked}))
       assertAudit(
         `regression_fixture_${fixture.id}`,
         passed,
-        `${fixture.subdomain} ${fixture.task_type} => ran=${result.ran}, correct=${result.correct}`
+        `${fixture.subdomain} ${fixture.method} => ran=${result.ran}, correct=${result.correct}`
       );
     }
 
