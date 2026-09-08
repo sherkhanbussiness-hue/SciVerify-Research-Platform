@@ -139,9 +139,11 @@ function Shell({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-2"><Badge variant="outline" className="hidden gap-1.5 border-emerald-400/25 bg-emerald-400/5 text-[10px] text-emerald-300 sm:flex"><motion.span className="size-1.5 rounded-full bg-emerald-400" animate={{ opacity: [1, 0.45, 1], scale: [1, 1.25, 1] }} transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }} />Sandbox healthy</Badge><Button variant="outline" size="sm" onClick={() => setLocation('/run')} data-testid="button-header-run"><Play className="size-3.5" /> Run evaluation</Button></div>
         </header>
         <main className="mx-auto max-w-[1440px] px-4 py-7 md:px-8 md:py-9">
-          <motion.div key={location} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, ease: 'easeOut' }}>
-            {children}
-          </motion.div>
+          <AnimatePresence mode="wait">
+            <motion.div key={location} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.18, ease: 'easeOut' }}>
+              {children}
+            </motion.div>
+          </AnimatePresence>
         </main>
       </div>
     </div>
