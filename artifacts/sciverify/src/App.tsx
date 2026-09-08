@@ -183,17 +183,18 @@ function MetricCard({ label, value, delta, icon: Icon, tone = 'cyan', index = 0 
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 14 }}
+      initial={{ opacity: 0, y: 18 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, delay: index * 0.08, ease: 'easeOut' }}
-      whileHover={{ y: -3, scale: 1.015 }}
-      className="h-full"
+      transition={{ duration: 0.4, delay: index * 0.09, ease: 'easeOut' }}
+      whileHover={{ y: -5, scale: 1.025 }}
+      whileTap={{ scale: 0.98 }}
+      className="h-full cursor-pointer select-none"
     >
-      <Card className="panel-glow h-full overflow-hidden transition-all duration-200 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
+      <Card className="panel-glow h-full overflow-hidden border border-border hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10 transition-colors duration-200">
         <CardContent className="p-5">
           <div className="flex items-start justify-between">
             <div className="text-[11px] font-semibold uppercase tracking-[.11em] text-muted-foreground">{label}</div>
-            <div className={`grid size-8 place-items-center rounded-md border ${tones[tone]}`}><Icon className="size-4" /></div>
+            <div className={`grid size-8 place-items-center rounded-md border ${tones[tone]} transition-transform duration-200 group-hover:scale-110`}><Icon className="size-4" /></div>
           </div>
           <div className="mt-4 flex items-baseline gap-2">
             {isBareDash ? (
@@ -265,7 +266,15 @@ function OverviewContent() {
 }
 
 function QuickAction({ href, icon: Icon, title, copy }: { href: string; icon: typeof Play; title: string; copy: string }) {
-  return <Link href={href} className="group rounded-lg border border-border bg-card p-4 transition-colors hover:border-primary/40 hover:bg-primary/[.04]" data-testid={`link-quick-${title.toLowerCase().replaceAll(' ', '-')}`}><div className="mb-4 flex size-8 items-center justify-center rounded-md bg-secondary text-primary"><Icon className="size-4" /></div><div className="flex items-center justify-between text-sm font-semibold">{title}<ChevronRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" /></div><p className="mt-1 text-[11px] text-muted-foreground">{copy}</p></Link>;
+  return (
+    <motion.div whileHover={{ y: -4, scale: 1.02 }} whileTap={{ scale: 0.98 }} transition={{ duration: 0.18 }} className="h-full">
+      <Link href={href} className="group block h-full rounded-lg border border-border bg-card p-4 transition-all duration-200 hover:border-primary/40 hover:bg-primary/[.04] hover:shadow-lg hover:shadow-primary/5" data-testid={`link-quick-${title.toLowerCase().replaceAll(' ', '-')}`}>
+        <div className="mb-4 flex size-8 items-center justify-center rounded-md bg-secondary text-primary transition-colors group-hover:bg-primary/20"><Icon className="size-4" /></div>
+        <div className="flex items-center justify-between text-sm font-semibold">{title}<ChevronRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" /></div>
+        <p className="mt-1 text-[11px] text-muted-foreground">{copy}</p>
+      </Link>
+    </motion.div>
+  );
 }
 
 function Landing() {
