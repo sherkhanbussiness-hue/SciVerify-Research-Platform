@@ -79,6 +79,15 @@ export function StarCanvas({ data, isPlaying, speed }: StarCanvasProps) {
       speed: 0.5 + Math.random() * 0.5,
     }));
 
+    // Background micro-stars for starfield depth
+    const bgStars = Array.from({ length: 100 }, (_, i) => ({
+      xRatio: Math.abs(Math.sin(i * 19.3 + 2.1)),
+      yRatio: Math.abs(Math.cos(i * 11.5 + 4.7)),
+      size: 0.8 + (i % 3) * 0.4,
+      speed: 0.8 + (i % 4) * 0.6,
+      phase: (i % 10) * 0.5,
+    }));
+
     const render = () => {
       if (destroyed) return;
 
@@ -100,6 +109,22 @@ export function StarCanvas({ data, isPlaying, speed }: StarCanvasProps) {
       const cx = width / 2;
       const cy = height / 2;
 
+      // 0. Background Nebula & Micro-stars
+      const nebGrad = ctx.createRadialGradient(cx, cy, 10, cx, cy, Math.max(width, height) * 0.6);
+      nebGrad.addColorStop(0, "rgba(25, 18, 45, 0.3)");
+      nebGrad.addColorStop(0.6, "rgba(8, 12, 28, 0.15)");
+      nebGrad.addColorStop(1, "transparent");
+      ctx.fillStyle = nebGrad;
+      ctx.fillRect(0, 0, width, height);
+
+      bgStars.forEach((s) => {
+        const twinkle = 0.35 + 0.65 * Math.sin(t * s.speed + s.phase);
+        ctx.fillStyle = `rgba(220, 235, 255, ${twinkle * 0.75})`;
+        ctx.beginPath();
+        ctx.arc(s.xRatio * width, s.yRatio * height, s.size, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
       // Base radius scaled logarithmically to fit canvas nicely while showing contrast
       const radiusRsun = data.inputs.radius_rsun;
       const minDimension = Math.min(width, height);
@@ -109,12 +134,12 @@ export function StarCanvas({ data, isPlaying, speed }: StarCanvasProps) {
 
       const baseColor = data.calculated.color_hex || "#fff2e6";
 
-      // 1. Outer Corona Glow (Multilayer Radial Gradient)
-      const coronaRadius = starRadius * 2.5;
-      const coronaGrad = ctx.createRadialGradient(cx, cy, Math.max(1, starRadius * 0.8), cx, cy, Math.max(2, coronaRadius));
-      coronaGrad.addColorStop(0, hexToRgba(baseColor, 0.6));
-      coronaGrad.addColorStop(0.3, hexToRgba(baseColor, 0.27));
-      coronaGrad.addColorStop(0.7, hexToRgba(baseColor, 0.07));
+      // 1. Outer Corona Glow (Multilayer Radial Gradient with bloom)
+      const coronaRadius = starRadius * 2.6;
+      const coronaGrad = ctx.createRadialGradient(cx, cy, Math.max(1, starRadius * 0.75), cx, cy, Math.max(2, coronaRadius));
+      coronaGrad.addColorStop(0, hexToRgba(baseColor, 0.65));
+      coronaGrad.addColorStop(0.3, hexToRgba(baseColor, 0.3));
+      coronaGrad.addColorStop(0.7, hexToRgba(baseColor, 0.08));
       coronaGrad.addColorStop(1, "transparent");
 
       ctx.fillStyle = coronaGrad;

@@ -42,11 +42,20 @@ export function QuasarCanvas({ data, isPlaying, speed }: QuasarCanvasProps) {
     resizeObserver.observe(canvas);
 
     // Jet knots and outflow particles (bounded pool)
-    const jetKnots = Array.from({ length: 24 }, (_, i) => ({
-      distFrac: (i / 24),
+    const jetKnots = Array.from({ length: 32 }, (_, i) => ({
+      distFrac: (i / 32),
       side: i % 2 === 0 ? 1 : -1,
       speed: 0.8 + Math.random() * 0.4,
       size: 2 + Math.random() * 4,
+    }));
+
+    // Background micro-stars
+    const bgStars = Array.from({ length: 110 }, (_, i) => ({
+      xRatio: Math.abs(Math.sin(i * 18.2 + 3.1)),
+      yRatio: Math.abs(Math.cos(i * 12.4 + 6.3)),
+      size: 0.8 + (i % 3) * 0.4,
+      speed: 0.8 + (i % 4) * 0.6,
+      phase: (i % 10) * 0.5,
     }));
 
     const render = () => {
@@ -69,6 +78,22 @@ export function QuasarCanvas({ data, isPlaying, speed }: QuasarCanvasProps) {
 
       const cx = width / 2;
       const cy = height / 2;
+
+      // 0. Deep Space Nebula & Micro-stars
+      const nebGrad = ctx.createRadialGradient(cx, cy, 10, cx, cy, Math.max(width, height) * 0.65);
+      nebGrad.addColorStop(0, "rgba(40, 20, 70, 0.35)");
+      nebGrad.addColorStop(0.5, "rgba(15, 25, 60, 0.2)");
+      nebGrad.addColorStop(1, "transparent");
+      ctx.fillStyle = nebGrad;
+      ctx.fillRect(0, 0, width, height);
+
+      bgStars.forEach((s) => {
+        const twinkle = 0.35 + 0.65 * Math.sin(t * s.speed + s.phase);
+        ctx.fillStyle = `rgba(210, 230, 255, ${twinkle * 0.75})`;
+        ctx.beginPath();
+        ctx.arc(s.xRatio * width, s.yRatio * height, s.size, 0, Math.PI * 2);
+        ctx.fill();
+      });
 
       const smbhRadius = 18;
       const diskRadius = Math.min(width, height) * 0.38;

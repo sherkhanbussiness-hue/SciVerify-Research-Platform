@@ -45,6 +45,15 @@ export function PulsarCanvas({ data, isPlaying, speed }: PulsarCanvasProps) {
     const freqHz = data.calculated.frequency_hz;
     const magAngleRad = (data.inputs.magnetic_angle_deg * Math.PI) / 180;
 
+    // Background micro-stars
+    const bgStars = Array.from({ length: 110 }, (_, i) => ({
+      xRatio: Math.abs(Math.sin(i * 21.4 + 1.8)),
+      yRatio: Math.abs(Math.cos(i * 14.1 + 8.2)),
+      size: 0.8 + (i % 3) * 0.4,
+      speed: 0.8 + (i % 4) * 0.6,
+      phase: (i % 10) * 0.5,
+    }));
+
     const render = () => {
       if (destroyed) return;
 
@@ -69,6 +78,22 @@ export function PulsarCanvas({ data, isPlaying, speed }: PulsarCanvasProps) {
 
       const cx = width / 2;
       const cy = height * 0.45;
+
+      // 0. Deep Space Nebula & Micro-stars
+      const nebGrad = ctx.createRadialGradient(cx, cy, 10, cx, cy, Math.max(width, height) * 0.65);
+      nebGrad.addColorStop(0, "rgba(20, 35, 75, 0.35)");
+      nebGrad.addColorStop(0.5, "rgba(10, 18, 45, 0.2)");
+      nebGrad.addColorStop(1, "transparent");
+      ctx.fillStyle = nebGrad;
+      ctx.fillRect(0, 0, width, height);
+
+      bgStars.forEach((s) => {
+        const twinkle = 0.35 + 0.65 * Math.sin(phase * s.speed + s.phase);
+        ctx.fillStyle = `rgba(210, 235, 255, ${twinkle * 0.75})`;
+        ctx.beginPath();
+        ctx.arc(s.xRatio * width, s.yRatio * height, s.size, 0, Math.PI * 2);
+        ctx.fill();
+      });
       const nsRadius = 24; // Compact neutron star
 
       // Beam sweeping projection:

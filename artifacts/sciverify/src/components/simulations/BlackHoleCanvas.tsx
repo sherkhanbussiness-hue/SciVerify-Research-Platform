@@ -43,11 +43,20 @@ export function BlackHoleCanvas({ data, isPlaying, speed }: BlackHoleCanvasProps
     resizeObserver.observe(canvas);
 
     // Accretion disk particulate system (bounded pool)
-    const diskParticles = Array.from({ length: 80 }, (_, i) => ({
-      radiusRatio: 1.8 + Math.random() * 3.5, // Between ISCO and outer disk
-      angle: (i / 80) * Math.PI * 2,
-      baseSpeed: 1.2 / Math.sqrt(1.8 + Math.random() * 3.5), // Keplerian differential rotation
-      size: 1.5 + Math.random() * 2.5,
+    const diskParticles = Array.from({ length: 110 }, (_, i) => ({
+      radiusRatio: 1.6 + Math.random() * 3.8, // Between ISCO and outer disk
+      angle: (i / 110) * Math.PI * 2,
+      baseSpeed: 1.4 / Math.sqrt(1.6 + Math.random() * 3.8), // Keplerian differential rotation
+      size: 1.2 + Math.random() * 2.8,
+    }));
+
+    // Background Stars for Gravitational Lensing Deflection
+    const backgroundStars = Array.from({ length: 120 }, (_, i) => ({
+      xRatio: Math.abs(Math.sin(i * 17.1 + 3.4)),
+      yRatio: Math.abs(Math.cos(i * 13.7 + 1.2)),
+      size: 0.8 + (i % 3) * 0.5,
+      speed: 1 + (i % 4) * 0.7,
+      phase: (i % 12) * 0.5,
     }));
 
     const render = () => {
@@ -78,6 +87,32 @@ export function BlackHoleCanvas({ data, isPlaying, speed }: BlackHoleCanvasProps
       const rPhPx = rsPx * 1.5; // Photon sphere
       const rIscoPx = rsPx * 3.0; // ISCO
 
+      // 0. Cosmic Nebula Background Glow
+      const nebGrad = ctx.createRadialGradient(cx * 0.7, cy * 0.6, 10, cx, cy, Math.max(width, height) * 0.65);
+      nebGrad.addColorStop(0, "rgba(25, 15, 60, 0.35)");
+      nebGrad.addColorStop(0.5, "rgba(10, 25, 55, 0.2)");
+      nebGrad.addColorStop(1, "transparent");
+      ctx.fillStyle = nebGrad;
+      ctx.fillRect(0, 0, width, height);
+
+      // 0.5. Lensed Background Stars
+      backgroundStars.forEach((s) => {
+        const sx = s.xRatio * width;
+        const sy = s.yRatio * height;
+        const dx = sx - cx;
+        const dy = sy - cy;
+        const dist = Math.hypot(dx, dy) || 1;
+        const deflect = dist > rsPx * 1.05 ? (rsPx * 16) / dist : 0;
+        const lensedX = sx + (dx / dist) * deflect;
+        const lensedY = sy + (dy / dist) * deflect;
+
+        const twinkle = 0.35 + 0.65 * Math.sin(t * s.speed + s.phase);
+        ctx.fillStyle = `rgba(210, 230, 255, ${twinkle * 0.8})`;
+        ctx.beginPath();
+        ctx.arc(lensedX, lensedY, s.size, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
       // 1. Gravitational Lensing Distorted Background Grid Lines
       ctx.save();
       ctx.strokeStyle = "rgba(40, 60, 100, 0.18)";
@@ -100,15 +135,14 @@ export function BlackHoleCanvas({ data, isPlaying, speed }: BlackHoleCanvasProps
       ctx.restore();
 
       // 2. Tilted Accretion Disk (Background Half)
-      // Disk tilted at 70 degrees
       const diskTilt = 0.28; // Y compression
       ctx.save();
 
       // Draw rear accretion disk
       const outerDiskRadius = rsPx * 5.2;
-      const diskGrad = ctx.createRadialGradient(cx, cy, rsPx * 1.5, cx, cy, outerDiskRadius);
-      diskGrad.addColorStop(0, "rgba(255, 230, 180, 0.95)");
-      diskGrad.addColorStop(0.2, "rgba(255, 140, 40, 0.7)");
+      const diskGrad = ctx.createRadialGradient(cx, cy, rsPx * 1.4, cx, cy, outerDiskRadius);
+      diskGrad.addColorStop(0, "rgba(255, 235, 190, 0.95)");
+      diskGrad.addColorStop(0.2, "rgba(255, 145, 45, 0.75)");
       diskGrad.addColorStop(0.6, "rgba(180, 50, 20, 0.4)");
       diskGrad.addColorStop(1, "transparent");
 
@@ -118,23 +152,28 @@ export function BlackHoleCanvas({ data, isPlaying, speed }: BlackHoleCanvasProps
       ctx.fill();
 
       // Upper Lensed Secondary Arc of the Accretion Disk (Einstein Ring effect)
-      ctx.strokeStyle = "rgba(255, 170, 70, 0.7)";
-      ctx.lineWidth = 4;
+      ctx.strokeStyle = "rgba(255, 175, 75, 0.75)";
+      ctx.shadowColor = "rgba(255, 140, 30, 0.5)";
+      ctx.shadowBlur = 10;
+      ctx.lineWidth = 4.5;
       ctx.beginPath();
       ctx.arc(cx, cy - rsPx * 0.4, rPhPx * 1.15, Math.PI * 1.1, Math.PI * 1.9);
       ctx.stroke();
+      ctx.shadowBlur = 0;
 
       ctx.restore();
 
-      // 3. Photon Ring (Thin brilliant circular light ring)
-      ctx.strokeStyle = "#fff0c0";
+      // 3. Photon Ring (Thin brilliant circular light ring with multi-pass bloom)
+      ctx.save();
+      const pulseGlow = 14 + Math.sin(t * 2) * 4;
+      ctx.strokeStyle = "#fff2cb";
       ctx.shadowColor = "#ffaa33";
-      ctx.shadowBlur = 15;
-      ctx.lineWidth = 2.5;
+      ctx.shadowBlur = pulseGlow;
+      ctx.lineWidth = 2.8;
       ctx.beginPath();
       ctx.arc(cx, cy, rPhPx, 0, Math.PI * 2);
       ctx.stroke();
-      ctx.shadowBlur = 0;
+      ctx.restore();
 
       // 4. Pitch-Black Event Horizon (Absolute Shadow)
       ctx.fillStyle = "#000000";

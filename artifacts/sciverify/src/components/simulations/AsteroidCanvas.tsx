@@ -46,6 +46,15 @@ export function AsteroidCanvas({ data, isPlaying, speed }: AsteroidCanvasProps) 
     const aphelionAu = data.calculated.aphelion_au;
     const periodDays = data.calculated.orbital_period_days;
 
+    // Background micro-stars
+    const bgStars = Array.from({ length: 110 }, (_, i) => ({
+      xRatio: Math.abs(Math.sin(i * 14.7 + 5.3)),
+      yRatio: Math.abs(Math.cos(i * 8.9 + 2.4)),
+      size: 0.8 + (i % 3) * 0.4,
+      speed: 0.8 + (i % 4) * 0.6,
+      phase: (i % 10) * 0.5,
+    }));
+
     const render = () => {
       if (destroyed) return;
 
@@ -84,6 +93,22 @@ export function AsteroidCanvas({ data, isPlaying, speed }: AsteroidCanvasProps) 
 
       const cx = width / 2;
       const cy = height / 2;
+
+      // 0. Background Nebula & Micro-stars
+      const nebGrad = ctx.createRadialGradient(cx, cy, 10, cx, cy, Math.max(width, height) * 0.6);
+      nebGrad.addColorStop(0, "rgba(15, 30, 50, 0.3)");
+      nebGrad.addColorStop(0.6, "rgba(6, 12, 24, 0.15)");
+      nebGrad.addColorStop(1, "transparent");
+      ctx.fillStyle = nebGrad;
+      ctx.fillRect(0, 0, width, height);
+
+      bgStars.forEach((s) => {
+        const twinkle = 0.35 + 0.65 * Math.sin(curTime * 0.5 * s.speed + s.phase);
+        ctx.fillStyle = `rgba(200, 225, 255, ${twinkle * 0.75})`;
+        ctx.beginPath();
+        ctx.arc(s.xRatio * width, s.yRatio * height, s.size, 0, Math.PI * 2);
+        ctx.fill();
+      });
 
       // Coordinate scaling: map astronomical units to canvas pixels
       // Allow orbit to fit comfortably within 80% of canvas
