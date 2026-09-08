@@ -1,4 +1,5 @@
-import { useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -137,16 +138,78 @@ function Shell({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-3"><Button size="icon" variant="ghost" className="lg:hidden" onClick={() => setMobileOpen(true)} aria-label="Open navigation" data-testid="button-open-navigation"><Menu className="size-5" /></Button><div className="hidden text-xs text-muted-foreground sm:block"><span className="text-foreground">Sher's workspace</span><span className="mx-2 text-border">/</span>research-harness</div></div>
           <div className="flex items-center gap-2"><Badge variant="outline" className="hidden gap-1.5 border-emerald-400/25 bg-emerald-400/5 text-[10px] text-emerald-300 sm:flex"><span className="size-1.5 rounded-full bg-emerald-400" />Sandbox healthy</Badge><Button variant="outline" size="sm" onClick={() => setLocation('/run')} data-testid="button-header-run"><Play className="size-3.5" /> Run evaluation</Button></div>
         </header>
-        <main className="mx-auto max-w-[1440px] px-4 py-7 md:px-8 md:py-9">{children}</main>
+        <main className="mx-auto max-w-[1440px] px-4 py-7 md:px-8 md:py-9">
+          <motion.div key={location} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, ease: 'easeOut' }}>
+            {children}
+          </motion.div>
+        </main>
       </div>
     </div>
   );
 }
 
-function MetricCard({ label, value, delta, icon: Icon, tone = 'cyan' }: { label: string; value: string; delta?: string; icon: typeof Activity; tone?: 'cyan' | 'violet' | 'amber' | 'green' }) {
+
+function MetricCard({ label, value, delta, icon: Icon, tone = 'cyan', index = 0 }: { label: string; value: string; delta?: string; icon: typeof Activity; tone?: 'cyan' | 'violet' | 'amber' | 'green'; index?: number }) {
   const tones = { cyan: 'text-primary bg-primary/10 border-primary/20', violet: 'text-accent bg-accent/10 border-accent/20', amber: 'text-amber-300 bg-amber-400/10 border-amber-400/20', green: 'text-emerald-300 bg-emerald-400/10 border-emerald-400/20' };
-  return <Card className="panel-glow animate-rise overflow-hidden"><CardContent className="p-5"><div className="flex items-start justify-between"><div className="text-[11px] font-semibold uppercase tracking-[.11em] text-muted-foreground">{label}</div><div className={`grid size-8 place-items-center rounded-md border ${tones[tone]}`}><Icon className="size-4" /></div></div><div className="mt-4 flex items-baseline gap-2"><div className="font-mono text-[27px] font-medium tracking-tight text-foreground">{value}</div>{delta && <span className="text-[11px] text-emerald-300">{delta}</span>}</div></CardContent></Card>;
+
+  // Extract numeric portion and suffix for count-up animation
+  const numMatch = value.match(/^(\d+\.?\d*)(.*)/);
+  const numericTarget = numMatch ? parseFloat(numMatch[1]) : null;
+  const suffix = numMatch ? numMatch[2] : '';
+
+  const [displayVal, setDisplayVal] = useState(numericTarget !== null ? '0' + suffix : value);
+
+  useEffect(() => {
+    if (numericTarget === null) { setDisplayVal(value); return; }
+    const duration = 700; // ms
+    const start = performance.now();
+    let raf: number;
+    const tick = (now: number) => {
+      const progress = Math.min((now - start) / duration, 1);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      const current = numericTarget * ease;
+      const formatted = numericTarget % 1 !== 0 ? current.toFixed(1) : String(Math.round(current)).padStart(numMatch![1].length, '0');
+      setDisplayVal(formatted + suffix);
+      if (progress < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  const isBareDash = displayVal === '—' || value === '—';
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, delay: index * 0.08, ease: 'easeOut' }}
+      whileHover={{ y: -3, scale: 1.015 }}
+      className="h-full"
+    >
+      <Card className="panel-glow h-full overflow-hidden transition-all duration-200 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
+        <CardContent className="p-5">
+          <div className="flex items-start justify-between">
+            <div className="text-[11px] font-semibold uppercase tracking-[.11em] text-muted-foreground">{label}</div>
+            <div className={`grid size-8 place-items-center rounded-md border ${tones[tone]}`}><Icon className="size-4" /></div>
+          </div>
+          <div className="mt-4 flex items-baseline gap-2">
+            {isBareDash ? (
+              <span className="inline-flex items-center gap-1.5 py-1 text-xs font-normal text-muted-foreground/70">
+                <span className="size-1.5 rounded-full bg-primary/40 animate-pulse" />
+                No data yet
+              </span>
+            ) : (
+              <div className="font-mono text-[27px] font-medium tracking-tight text-foreground">{displayVal}</div>
+            )}
+            {delta && <span className="text-[11px] text-emerald-300">{delta}</span>}
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
 }
+
 
 function OverviewContent() {
   const [period, setPeriod] = useState('30d');
@@ -184,13 +247,13 @@ function OverviewContent() {
   return <Shell><PageHeader eyebrow="Workspace telemetry" title="Evaluation overview" description="Track whether AI-generated scientific code executes, reasons correctly, and stays reproducible." actions={<><div className="hidden items-center gap-1 rounded-md border border-border bg-card p-1 sm:flex">{['7d', '30d', '90d'].map((item) => <button key={item} onClick={() => setPeriod(item)} className={`rounded px-2.5 py-1.5 text-[11px] font-semibold ${item === period ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:text-foreground'}`} data-testid={`button-period-${item}`}>{item}</button>)}</div><Link href="/run"><Button data-testid="button-run-new"><Play className="size-3.5" /> Run new evaluation</Button></Link></>} />
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Scientific accuracy" value={accuracyVal} icon={ShieldCheck} tone="cyan" />
-        <MetricCard label="Execution failure" value={failureVal} icon={XCircle} tone="amber" />
-        <MetricCard label="Scientific tasks" value={tasksCount} icon={FlaskConical} tone="violet" />
-        <MetricCard label="Models evaluated" value={modelsCount} icon={Users} tone="green" />
+        <MetricCard label="Scientific accuracy" value={accuracyVal} icon={ShieldCheck} tone="cyan" index={0} />
+        <MetricCard label="Execution failure" value={failureVal} icon={XCircle} tone="amber" index={1} />
+        <MetricCard label="Scientific tasks" value={tasksCount} icon={FlaskConical} tone="violet" index={2} />
+        <MetricCard label="Models evaluated" value={modelsCount} icon={Users} tone="green" index={3} />
       </div>
       <div className="grid gap-5 xl:grid-cols-[1.55fr_1fr]">
-        <Card className="panel-glow"><CardHeader className="flex-row items-start justify-between space-y-0"><div><CardTitle className="text-sm">Performance by model</CardTitle><p className="mt-1 text-xs text-muted-foreground">Aggregate across {evaluations.length} evaluation{evaluations.length === 1 ? '' : 's'} · {period} window</p></div><Button variant="ghost" size="icon" aria-label="Print performance chart" onClick={() => window.print()} data-testid="button-performance-options"><MoreHorizontal className="size-4" /></Button></CardHeader><CardContent><div className="mb-3 flex flex-wrap gap-4 text-[11px] text-muted-foreground"><span className="flex items-center gap-1.5"><span className="size-2 rounded-sm bg-primary" />Execution success</span><span className="flex items-center gap-1.5"><span className="size-2 rounded-sm bg-accent" />Scientific accuracy</span><span className="flex items-center gap-1.5"><span className="size-2 rounded-sm bg-red-400/70" />Execution failure</span></div><div className="h-[240px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={performance} barGap={4} margin={{ left: -18, right: 8, top: 10 }}><CartesianGrid strokeDasharray="2 5" stroke="hsl(218 22% 18% / .7)" vertical={false} /><XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#8090a3', fontSize: 11 }} /><YAxis axisLine={false} tickLine={false} tick={{ fill: '#687689', fontSize: 10 }} unit="%" /><ChartTooltip cursor={{ fill: 'hsl(220 24% 13% / .65)' }} contentStyle={{ background: '#111924', border: '1px solid #263341', borderRadius: 6, fontSize: 11 }} /><Bar dataKey="execution" fill="#57d4d9" radius={[3, 3, 0, 0]} /><Bar dataKey="accuracy" fill="#b59afb" radius={[3, 3, 0, 0]} /><Bar dataKey="failed" fill="#d77878" radius={[3, 3, 0, 0]} /></BarChart></ResponsiveContainer></div></CardContent></Card>
+        <Card className="panel-glow"><CardHeader className="flex-row items-start justify-between space-y-0"><div><CardTitle className="text-sm">Performance by model</CardTitle><p className="mt-1 text-xs text-muted-foreground">Aggregate across {evaluations.length} evaluation{evaluations.length === 1 ? '' : 's'} · {period} window</p></div><Button variant="ghost" size="icon" aria-label="Print performance chart" onClick={() => window.print()} data-testid="button-performance-options"><MoreHorizontal className="size-4" /></Button></CardHeader><CardContent><div className="mb-3 flex flex-wrap gap-4 text-[11px] text-muted-foreground"><span className="flex items-center gap-1.5"><span className="size-2 rounded-sm bg-primary" />Execution success</span><span className="flex items-center gap-1.5"><span className="size-2 rounded-sm bg-accent" />Scientific accuracy</span><span className="flex items-center gap-1.5"><span className="size-2 rounded-sm bg-red-400/70" />Execution failure</span></div><div className="h-[240px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={performance} barGap={4} margin={{ left: -18, right: 8, top: 10 }}><CartesianGrid strokeDasharray="2 5" stroke="hsl(218 22% 18% / .7)" vertical={false} /><XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#8090a3', fontSize: 11 }} /><YAxis axisLine={false} tickLine={false} tick={{ fill: '#687689', fontSize: 10 }} unit="%" /><ChartTooltip cursor={{ fill: 'hsl(220 24% 13% / .65)' }} contentStyle={{ background: '#111924', border: '1px solid #263341', borderRadius: 6, fontSize: 11 }} /><Bar dataKey="execution" fill="#57d4d9" radius={[3, 3, 0, 0]} animationDuration={800} animationEasing="ease-out" /><Bar dataKey="accuracy" fill="#b59afb" radius={[3, 3, 0, 0]} animationDuration={800} animationEasing="ease-out" /><Bar dataKey="failed" fill="#d77878" radius={[3, 3, 0, 0]} animationDuration={800} animationEasing="ease-out" /></BarChart></ResponsiveContainer></div></CardContent></Card>
         <Card className="panel-glow"><CardHeader><CardTitle className="text-sm">Task domains</CardTitle><p className="mt-1 text-xs text-muted-foreground">Distribution across active fixtures</p></CardHeader><CardContent><div className="flex items-center justify-between gap-4"><div className="relative size-40 shrink-0"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={domains} dataKey="value" nameKey="name" innerRadius={47} outerRadius={70} paddingAngle={3} stroke="none">{domains.map((entry) => <Cell key={entry.name} fill={entry.color} />)}</Pie></PieChart></ResponsiveContainer><div className="absolute inset-0 grid place-items-center text-center"><div><div className="font-mono text-xl font-medium">{tasksCount}</div><div className="text-[10px] text-muted-foreground">tasks</div></div></div></div><div className="w-full space-y-2.5">{domains.map((item) => <div key={item.name} className="flex items-center justify-between gap-3 text-[11px]"><span className="flex items-center gap-2 text-muted-foreground"><span className="size-2 rounded-full" style={{ backgroundColor: item.color }} />{item.name}</span><span className="font-mono text-foreground">{item.value}%</span></div>)}</div></div></CardContent></Card>
       </div>
       <Card className="panel-glow"><CardHeader className="flex-row items-center justify-between space-y-0"><div><CardTitle className="text-sm">Recent evaluations</CardTitle><p className="mt-1 text-xs text-muted-foreground">Latest runs across all models and fixtures</p></div><Link href={evaluations.length > 0 ? `/results/${evaluations[0].id}` : '/run'} className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline" data-testid="link-view-all-results">View results <ArrowRight className="size-3.5" /></Link></CardHeader><CardContent className="p-0"><Table><TableHeader><TableRow><TableHead className="pl-6">Task</TableHead><TableHead>Model</TableHead><TableHead>Status</TableHead><TableHead>Accuracy</TableHead><TableHead>Runtime</TableHead><TableHead className="pr-6">Date</TableHead></TableRow></TableHeader><TableBody>{evaluations.length === 0 ? <TableRow><TableCell colSpan={6} className="text-center py-8 text-xs text-muted-foreground">No evaluations run yet. Click "Run new evaluation" to execute an agent against a fixture.</TableCell></TableRow> : evaluations.slice(0, 5).map((run) => <TableRow key={run.id} className="cursor-pointer" data-testid={`row-evaluation-${run.id}`}><TableCell className="pl-6"><Link href={`/results/${run.id}`} className="font-medium text-foreground hover:text-primary">{tasks.find((t) => t.id === run.taskId)?.title || run.taskId}</Link></TableCell><TableCell className="text-muted-foreground">{models.find((m) => m.id === run.modelId)?.name || run.modelId}</TableCell><TableCell><StatusBadge status={run.status} /></TableCell><TableCell className="font-mono text-xs">{run.accuracy ? `${run.accuracy}%` : '0%'}</TableCell><TableCell className="font-mono text-xs text-muted-foreground">{run.runtime}s</TableCell><TableCell className="pr-6 text-xs text-muted-foreground">{run.date}</TableCell></TableRow>)}</TableBody></Table></CardContent></Card>
@@ -264,6 +327,158 @@ function TaskDetail({ id }: { id: string }) {
 function InfoBlock({ title, items }: { title: string; items: string[] }) { return <div><div className="mb-2 text-[10px] font-bold uppercase tracking-[.15em] text-muted-foreground">{title}</div><div className="space-y-1.5">{items.map((item) => <div key={item} className="flex gap-2 text-xs text-foreground"><span className="mt-1.5 size-1 rounded-full bg-primary" />{item}</div>)}</div></div>; }
 function MetaRow({ label, value }: { label: string; value: string }) { return <div className="flex items-center justify-between gap-3 border-b border-border/60 pb-3 last:border-0 last:pb-0"><span className="text-muted-foreground">{label}</span><span className="text-right font-mono text-[10px] text-foreground">{value}</span></div>; }
 
+// Three-stage pipeline tracker for RunPage — Item 1
+const PIPELINE_STAGES = [
+  { id: 'generate', label: 'Generate Code', description: 'Agent writes Python from the scientific prompt' },
+  { id: 'execute',  label: 'Sandbox Execute', description: 'Isolated Python 3 process runs generated code' },
+  { id: 'grade',    label: 'Grade', description: 'Output compared against Newtonian reference' },
+] as const;
+
+function PipelineTracker({ running, runError }: { running: boolean; runError: string | null }) {
+  // Use elapsed time to advance stages — the real API has no intermediate events
+  // but the pipeline stages do run sequentially, so elapsed time is the honest proxy.
+  const startRef = useRef<number | null>(null);
+  const [activeStage, setActiveStage] = useState(0);
+  const [elapsedMs, setElapsedMs] = useState(0);
+
+  useEffect(() => {
+    if (running) {
+      startRef.current = Date.now();
+      setActiveStage(0);
+      setElapsedMs(0);
+      const interval = setInterval(() => {
+        const elapsed = Date.now() - (startRef.current ?? Date.now());
+        setElapsedMs(elapsed);
+        // Stage advancement thresholds (realistic for typical LLM + sandbox latency)
+        if (elapsed > 5000) setActiveStage(2);       // grading after 5s
+        else if (elapsed > 1800) setActiveStage(1);  // execution after 1.8s
+        else setActiveStage(0);                       // code generation initially
+      }, 80);
+      return () => clearInterval(interval);
+    } else {
+      // When no longer running and no error, keep activeStage as is (all marked done below)
+      startRef.current = null;
+      return undefined;
+    }
+  }, [running]);
+
+  // Determine each stage status
+  const getStatus = (idx: number): 'pending' | 'active' | 'done' | 'error' => {
+    if (running) {
+      if (idx < activeStage) return 'done';
+      if (idx === activeStage) return 'active';
+      return 'pending';
+    }
+    if (runError) {
+      // Mark stages up to activeStage as done, activeStage as error, rest pending
+      if (idx < activeStage) return 'done';
+      if (idx === activeStage) return 'error';
+      return 'pending';
+    }
+    return 'done'; // success — all complete
+  };
+
+  const elapsed = (elapsedMs / 1000).toFixed(1);
+
+  return (
+    <div>
+      <div className="mb-5 flex items-center justify-between rounded-md border border-border bg-[#071019] px-4 py-3">
+        <span className="flex items-center gap-2 font-mono text-xs text-muted-foreground"><Terminal className="size-3.5 text-primary" /> sandbox / python-3</span>
+        <span className="font-mono text-xs text-primary">{running ? `${elapsed}s elapsed` : runError ? 'failed' : 'complete'}</span>
+      </div>
+
+      {/* Three-stage tracker */}
+      <div className="mb-5 grid grid-cols-3 gap-3">
+        {PIPELINE_STAGES.map((stage, idx) => {
+          const status = getStatus(idx);
+          return (
+            <motion.div
+              key={stage.id}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.08, duration: 0.28 }}
+              className={`relative overflow-hidden rounded-lg border p-4 ${
+                status === 'active' ? 'border-primary/50 bg-primary/[.06]' :
+                status === 'done'   ? 'border-emerald-400/30 bg-emerald-400/[.04]' :
+                status === 'error'  ? 'border-red-400/30 bg-red-400/[.05]' :
+                                     'border-border/50 bg-secondary/20'
+              }`}
+            >
+              {/* Active stage shimmer bar */}
+              <AnimatePresence>
+                {status === 'active' && (
+                  <motion.div
+                    className="absolute inset-x-0 top-0 h-0.5 bg-primary"
+                    initial={{ scaleX: 0, transformOrigin: 'left' }}
+                    animate={{ scaleX: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 1.4, ease: 'easeInOut', repeat: Infinity }}
+                  />
+                )}
+              </AnimatePresence>
+
+              {/* Stage number + status indicator */}
+              <div className="mb-3 flex items-center justify-between">
+                <span className="font-mono text-[10px] text-muted-foreground">0{idx + 1}</span>
+                <AnimatePresence mode="wait">
+                  {status === 'active' && (
+                    <motion.span
+                      key="active"
+                      initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
+                      className="size-2.5 rounded-full bg-primary"
+                      style={{ boxShadow: '0 0 8px hsl(191 92% 55% / .8)' }}
+                    >
+                      <motion.span
+                        className="block size-2.5 rounded-full bg-primary/40"
+                        animate={{ scale: [1, 1.9, 1], opacity: [0.8, 0, 0.8] }}
+                        transition={{ duration: 1.2, repeat: Infinity }}
+                      />
+                    </motion.span>
+                  )}
+                  {status === 'done' && (
+                    <motion.span key="done" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
+                      className="flex size-4 items-center justify-center rounded-full bg-emerald-400/20"
+                    >
+                      <Check className="size-2.5 text-emerald-400" />
+                    </motion.span>
+                  )}
+                  {status === 'error' && (
+                    <motion.span key="error" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
+                      className="flex size-4 items-center justify-center rounded-full bg-red-400/20"
+                    >
+                      <XCircle className="size-2.5 text-red-400" />
+                    </motion.span>
+                  )}
+                  {status === 'pending' && (
+                    <motion.span key="pending" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
+                      className="size-2 rounded-full bg-border"
+                    />
+                  )}
+                </AnimatePresence>
+              </div>
+
+              <div className={`text-xs font-semibold ${
+                status === 'active' ? 'text-primary' :
+                status === 'done'   ? 'text-emerald-300' :
+                status === 'error'  ? 'text-red-300' :
+                                     'text-muted-foreground'
+              }`}>{stage.label}</div>
+              <div className="mt-1 text-[10px] leading-4 text-muted-foreground">{stage.description}</div>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {runError && <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-xs text-red-300">{runError}</div>}
+      {!running && runError && (
+        <div className="mt-5 flex justify-end gap-2">
+          <Button variant="outline" onClick={() => { /* handled by parent */ }}>Reconfigure</Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function RunPage() {
   const [, setLocation] = useLocation();
   const [step, setStep] = useState(1);
@@ -312,7 +527,7 @@ function RunPage() {
   };
 
   const steps = [['01', 'Select task'], ['02', 'Configure'], ['03', 'Execute'], ['04', 'Results']];
-  return <Shell><PageHeader eyebrow="Controlled evaluation" title="Run an evaluation" description="Execute the agent against a scientific fixture in the isolated sandbox." /><div className="mx-auto max-w-4xl"><div className="mb-8 grid grid-cols-4 gap-2">{steps.map(([num, label], i) => <div key={num} className={`relative border-t-2 pt-3 ${step >= i + 1 ? 'border-primary' : 'border-border'}`}><div className={`font-mono text-[10px] ${step >= i + 1 ? 'text-primary' : 'text-muted-foreground'}`}>{num}</div><div className={`mt-1 text-xs font-semibold ${step >= i + 1 ? 'text-foreground' : 'text-muted-foreground'}`}>{label}</div></div>)}</div>{step < 3 && <Card className="panel-glow"><CardHeader><CardTitle className="text-base">{step === 1 ? 'Choose a scientific task' : 'Configure the agent run'}</CardTitle><p className="text-xs text-muted-foreground">{step === 1 ? 'The agent will receive the problem statement and evaluation criteria.' : 'These settings are recorded with the evaluation for reproducibility.'}</p></CardHeader><CardContent>{step === 1 ? <div className="grid gap-3">{tasks.map((task) => <button key={task.id} onClick={() => { setTaskId(task.id); setStep(2); }} className={`flex items-center gap-4 rounded-lg border p-4 text-left transition-colors ${task.id === taskId ? 'border-primary/50 bg-primary/[.06]' : 'border-border hover:border-primary/30 hover:bg-secondary/30'}`} data-testid={`button-select-task-${task.id}`}><div className="grid size-9 shrink-0 place-items-center rounded-md bg-secondary text-primary"><FlaskConical className="size-4" /></div><div className="min-w-0 flex-1"><div className="text-sm font-semibold">{task.title}</div><div className="mt-1 truncate text-xs text-muted-foreground">{task.description}</div></div><Badge variant="outline" className="hidden text-[10px] sm:flex">{task.domain}</Badge><ChevronRight className="size-4 text-muted-foreground" /></button>)}</div> : <div className="space-y-6"><div className="rounded-lg border border-primary/20 bg-primary/[.04] p-4"><div className="text-[10px] uppercase tracking-wider text-primary">Selected fixture</div><div className="mt-2 text-sm font-semibold">{selected.title}</div><div className="mt-1 text-xs text-muted-foreground">{selected.question}</div></div><div className="grid gap-5 md:grid-cols-2"><label className="space-y-2 text-xs font-semibold">Model<select value={modelId} onChange={(e) => setModelId(e.target.value)} className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 text-xs font-normal text-foreground" data-testid="select-model">{models.map((model) => <option key={model.id} value={model.id}>{model.name} · {model.provider}</option>)}<option value="configured-agent">Default configured agent</option></select></label><label className="space-y-2 text-xs font-semibold">Prompt version<select className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 text-xs font-normal text-foreground" data-testid="select-prompt-version"><option>scientific-v3.2</option><option>scientific-v3.1</option></select></label></div><div className="grid gap-5 md:grid-cols-3">{[['Temperature', '0.0'], ['Max tokens', '2,048'], ['Timeout', '30 sec']].map(([label, value]) => <label key={label} className="space-y-2 text-xs font-semibold">{label}<Input defaultValue={value} className="mt-1 font-mono text-xs" data-testid={`input-${label.toLowerCase().replace(' ', '-')}`} /></label>)}</div><div className="flex justify-between border-t border-border pt-5"><Button variant="ghost" onClick={() => setStep(1)} data-testid="button-back-task"><ArrowLeft className="size-4" /> Back</Button><Button onClick={start} data-testid="button-start-evaluation"><Play className="size-3.5" /> Run evaluation</Button></div></div>}</CardContent></Card>}{step >= 3 && <Card className="panel-glow"><CardHeader><div className="flex items-center justify-between"><div><CardTitle className="text-base">{running ? 'Executing evaluation' : runError ? 'Evaluation error' : 'Evaluation complete'}</CardTitle><p className="mt-1 text-xs text-muted-foreground">{selected.title} · {modelId}</p></div>{running ? <span className="flex items-center gap-2 text-xs text-primary"><span className="size-2 rounded-full bg-primary animate-pulse-soft" />Live trace</span> : runError ? <Badge variant="outline" className="gap-1 border-red-400/30 text-red-300"><XCircle className="size-3" />Failed</Badge> : <Badge className="gap-1 bg-emerald-400/15 text-emerald-300"><CheckCircle2 className="size-3" />Complete</Badge>}</div></CardHeader><CardContent><div className="mb-5 flex items-center justify-between rounded-md border border-border bg-[#071019] px-4 py-3"><span className="flex items-center gap-2 font-mono text-xs text-muted-foreground"><Terminal className="size-3.5 text-primary" /> sandbox / python-3</span><span className="font-mono text-xs text-primary">{running ? 'executing...' : 'complete'}</span></div>{runError ? <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-xs text-red-300">{runError}</div> : <div className="space-y-2 rounded-lg border border-border/70 bg-[#071019] p-4 font-mono text-[11px] leading-6">{['Initializing evaluation environment...', 'Loading task fixture and Newtonian parameters...', 'Sending scientific problem to agent...', 'Generating Python code...', 'Validating generated code...', 'Starting execution in isolated sandbox...', 'Checking output against reference...', 'Calculating reproducibility metrics...'].map((line, i) => <div key={line} className={`flex gap-3 ${i < (running ? 6 : 8) ? 'text-muted-foreground' : 'text-border'}`}><span className="text-border">{String(i + 1).padStart(2, '0')}</span><span className={i === 6 && !running ? 'text-emerald-300' : ''}>{i < (running ? 7 : 8) && <Check className="mr-1 inline size-3 text-emerald-400" />}{line}</span></div>)}</div>}{!running && runError && <div className="mt-5 flex justify-end gap-2"><Button variant="outline" onClick={() => setStep(2)}>Reconfigure</Button><Button onClick={start}>Retry</Button></div>}</CardContent></Card>}</div></Shell>;
+  return <Shell><PageHeader eyebrow="Controlled evaluation" title="Run an evaluation" description="Execute the agent against a scientific fixture in the isolated sandbox." /><div className="mx-auto max-w-4xl"><div className="mb-8 grid grid-cols-4 gap-2">{steps.map(([num, label], i) => <div key={num} className={`relative border-t-2 pt-3 ${step >= i + 1 ? 'border-primary' : 'border-border'}`}><div className={`font-mono text-[10px] ${step >= i + 1 ? 'text-primary' : 'text-muted-foreground'}`}>{num}</div><div className={`mt-1 text-xs font-semibold ${step >= i + 1 ? 'text-foreground' : 'text-muted-foreground'}`}>{label}</div></div>)}</div>{step < 3 && <Card className="panel-glow"><CardHeader><CardTitle className="text-base">{step === 1 ? 'Choose a scientific task' : 'Configure the agent run'}</CardTitle><p className="text-xs text-muted-foreground">{step === 1 ? 'The agent will receive the problem statement and evaluation criteria.' : 'These settings are recorded with the evaluation for reproducibility.'}</p></CardHeader><CardContent>{step === 1 ? <div className="grid gap-3">{tasks.map((task) => <button key={task.id} onClick={() => { setTaskId(task.id); setStep(2); }} className={`flex items-center gap-4 rounded-lg border p-4 text-left transition-colors ${task.id === taskId ? 'border-primary/50 bg-primary/[.06]' : 'border-border hover:border-primary/30 hover:bg-secondary/30'}`} data-testid={`button-select-task-${task.id}`}><div className="grid size-9 shrink-0 place-items-center rounded-md bg-secondary text-primary"><FlaskConical className="size-4" /></div><div className="min-w-0 flex-1"><div className="text-sm font-semibold">{task.title}</div><div className="mt-1 truncate text-xs text-muted-foreground">{task.description}</div></div><Badge variant="outline" className="hidden text-[10px] sm:flex">{task.domain}</Badge><ChevronRight className="size-4 text-muted-foreground" /></button>)}</div> : <div className="space-y-6"><div className="rounded-lg border border-primary/20 bg-primary/[.04] p-4"><div className="text-[10px] uppercase tracking-wider text-primary">Selected fixture</div><div className="mt-2 text-sm font-semibold">{selected.title}</div><div className="mt-1 text-xs text-muted-foreground">{selected.question}</div></div><div className="grid gap-5 md:grid-cols-2"><label className="space-y-2 text-xs font-semibold">Model<select value={modelId} onChange={(e) => setModelId(e.target.value)} className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 text-xs font-normal text-foreground" data-testid="select-model">{models.map((model) => <option key={model.id} value={model.id}>{model.name} · {model.provider}</option>)}<option value="configured-agent">Default configured agent</option></select></label><label className="space-y-2 text-xs font-semibold">Prompt version<select className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 text-xs font-normal text-foreground" data-testid="select-prompt-version"><option>scientific-v3.2</option><option>scientific-v3.1</option></select></label></div><div className="grid gap-5 md:grid-cols-3">{[['Temperature', '0.0'], ['Max tokens', '2,048'], ['Timeout', '30 sec']].map(([label, value]) => <label key={label} className="space-y-2 text-xs font-semibold">{label}<Input defaultValue={value} className="mt-1 font-mono text-xs" data-testid={`input-${label.toLowerCase().replace(' ', '-')}`} /></label>)}</div><div className="flex justify-between border-t border-border pt-5"><Button variant="ghost" onClick={() => setStep(1)} data-testid="button-back-task"><ArrowLeft className="size-4" /> Back</Button><Button onClick={start} data-testid="button-start-evaluation"><Play className="size-3.5" /> Run evaluation</Button></div></div>}</CardContent></Card>}{step >= 3 && <Card className="panel-glow"><CardHeader><div className="flex items-center justify-between"><div><CardTitle className="text-base">{running ? 'Executing evaluation' : runError ? 'Evaluation error' : 'Evaluation complete'}</CardTitle><p className="mt-1 text-xs text-muted-foreground">{selected.title} · {modelId}</p></div>{running ? <span className="flex items-center gap-2 text-xs text-primary"><span className="size-2 rounded-full bg-primary animate-pulse-soft" />Live trace</span> : runError ? <Badge variant="outline" className="gap-1 border-red-400/30 text-red-300"><XCircle className="size-3" />Failed</Badge> : <Badge className="gap-1 bg-emerald-400/15 text-emerald-300"><CheckCircle2 className="size-3" />Complete</Badge>}</div></CardHeader><CardContent><PipelineTracker running={running} runError={runError} />{!running && runError && <div className="mt-3 flex justify-end gap-2"><Button variant="outline" onClick={() => setStep(2)} data-testid="button-reconfigure">Reconfigure</Button><Button onClick={start} data-testid="button-retry">Retry</Button></div>}</CardContent></Card>}</div></Shell>;
 }
 
 function ResultsPage({ id }: { id: string }) {
@@ -362,7 +577,7 @@ function ResultsPage({ id }: { id: string }) {
 
 function OrbitPlot({ large = false }: { large?: boolean }) {
   const orbit = Array.from({ length: 81 }, (_, i) => { const theta = (i / 80) * Math.PI * 2; return { x: Math.cos(theta) * 1.5, y: Math.sin(theta) * .92 }; });
-  return <div className={`relative overflow-hidden rounded-lg border border-border bg-[#071019] ${large ? 'h-[430px]' : 'h-[300px]'}`}><div className="absolute inset-0 grid-noise opacity-40" /><ResponsiveContainer width="100%" height="100%"><LineChart data={orbit} margin={{ top: 20, right: 25, bottom: 25, left: 20 }}><CartesianGrid stroke="hsl(218 22% 18% / .55)" strokeDasharray="2 4" /><XAxis dataKey="x" type="number" domain={[-1.8, 1.8]} tick={{ fill: '#647386', fontSize: 9 }} tickLine={false} axisLine={false} /><YAxis dataKey="y" type="number" domain={[-1.3, 1.3]} tick={{ fill: '#647386', fontSize: 9 }} tickLine={false} axisLine={false} /><Line type="monotone" dataKey="y" stroke="#57d4d9" strokeWidth={2} dot={false} isAnimationActive={false} /><ChartTooltip contentStyle={{ background: '#111924', border: '1px solid #263341', fontSize: 11 }} /></LineChart></ResponsiveContainer><div className="pointer-events-none absolute left-1/2 top-1/2 grid size-16 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-accent/40 bg-accent/20 text-[9px] font-semibold text-accent">EARTH</div><div className="absolute left-4 top-4 text-[10px] uppercase tracking-[.15em] text-muted-foreground">x position (km) / y position (km)</div><div className="absolute bottom-4 right-4 flex items-center gap-2 text-[10px] text-primary"><span className="h-px w-5 bg-primary" />Satellite orbit</div></div>;
+  return <div className={`relative overflow-hidden rounded-lg border border-border bg-[#071019] ${large ? 'h-[430px]' : 'h-[300px]'}`}><div className="absolute inset-0 grid-noise opacity-40" /><ResponsiveContainer width="100%" height="100%"><LineChart data={orbit} margin={{ top: 20, right: 25, bottom: 25, left: 20 }}><CartesianGrid stroke="hsl(218 22% 18% / .55)" strokeDasharray="2 4" /><XAxis dataKey="x" type="number" domain={[-1.8, 1.8]} tick={{ fill: '#647386', fontSize: 9 }} tickLine={false} axisLine={false} /><YAxis dataKey="y" type="number" domain={[-1.3, 1.3]} tick={{ fill: '#647386', fontSize: 9 }} tickLine={false} axisLine={false} /><Line type="monotone" dataKey="y" stroke="#57d4d9" strokeWidth={2} dot={false} isAnimationActive={true} animationDuration={800} animationEasing="ease-out" /><ChartTooltip contentStyle={{ background: '#111924', border: '1px solid #263341', fontSize: 11 }} /></LineChart></ResponsiveContainer><div className="pointer-events-none absolute left-1/2 top-1/2 grid size-16 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-accent/40 bg-accent/20 text-[9px] font-semibold text-accent">EARTH</div><div className="absolute left-4 top-4 text-[10px] uppercase tracking-[.15em] text-muted-foreground">x position (km) / y position (km)</div><div className="absolute bottom-4 right-4 flex items-center gap-2 text-[10px] text-primary"><span className="h-px w-5 bg-primary" />Satellite orbit</div></div>;
 }
 
 function CodeViewer({ code, copied, copyCode }: { code: string; copied: boolean; copyCode: () => void }) {
