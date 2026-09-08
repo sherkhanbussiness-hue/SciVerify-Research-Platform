@@ -129,14 +129,14 @@ function Shell({ children }: { children: ReactNode }) {
             <div className="min-w-0"><div className="truncate text-xs font-semibold text-foreground">Sher</div><div className="truncate text-[10px] text-muted-foreground">Student Researcher</div></div>
             <MoreHorizontal className="ml-auto size-4 text-muted-foreground" />
           </div>
-          <div className="flex items-center gap-2 px-2 text-[10px] text-muted-foreground"><span className="size-1.5 rounded-full bg-emerald-400" />Harness online <span className="ml-auto font-mono">LIVE</span></div>
+          <div className="flex items-center gap-2 px-2 text-[10px] text-muted-foreground"><motion.span className="size-1.5 rounded-full bg-emerald-400" animate={{ opacity: [1, 0.45, 1], scale: [1, 1.25, 1] }} transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }} />Harness online <motion.span className="ml-auto font-mono text-[9px] font-semibold text-emerald-300/90 rounded border border-emerald-400/30 bg-emerald-400/10 px-1.5 py-0.5" animate={{ opacity: [1, 0.65, 1] }} transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}>LIVE</motion.span></div>
         </div>
       </aside>
       {mobileOpen && <button aria-label="Close navigation" className="fixed inset-0 z-30 bg-background/70 backdrop-blur-sm lg:hidden" onClick={() => setMobileOpen(false)} />}
       <div className="lg:pl-[248px]">
         <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border/70 bg-background/90 px-4 backdrop-blur-md md:px-8">
           <div className="flex items-center gap-3"><Button size="icon" variant="ghost" className="lg:hidden" onClick={() => setMobileOpen(true)} aria-label="Open navigation" data-testid="button-open-navigation"><Menu className="size-5" /></Button><div className="hidden text-xs text-muted-foreground sm:block"><span className="text-foreground">Sher's workspace</span><span className="mx-2 text-border">/</span>research-harness</div></div>
-          <div className="flex items-center gap-2"><Badge variant="outline" className="hidden gap-1.5 border-emerald-400/25 bg-emerald-400/5 text-[10px] text-emerald-300 sm:flex"><span className="size-1.5 rounded-full bg-emerald-400" />Sandbox healthy</Badge><Button variant="outline" size="sm" onClick={() => setLocation('/run')} data-testid="button-header-run"><Play className="size-3.5" /> Run evaluation</Button></div>
+          <div className="flex items-center gap-2"><Badge variant="outline" className="hidden gap-1.5 border-emerald-400/25 bg-emerald-400/5 text-[10px] text-emerald-300 sm:flex"><motion.span className="size-1.5 rounded-full bg-emerald-400" animate={{ opacity: [1, 0.45, 1], scale: [1, 1.25, 1] }} transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }} />Sandbox healthy</Badge><Button variant="outline" size="sm" onClick={() => setLocation('/run')} data-testid="button-header-run"><Play className="size-3.5" /> Run evaluation</Button></div>
         </header>
         <main className="mx-auto max-w-[1440px] px-4 py-7 md:px-8 md:py-9">
           <motion.div key={location} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, ease: 'easeOut' }}>
