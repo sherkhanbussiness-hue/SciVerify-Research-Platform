@@ -105,10 +105,13 @@ simulationRouter.post("/simulation/verify", async (req: Request, res: Response) 
         const lines = capture.stdout.trim().split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
         const lastLine = lines[lines.length - 1];
         parsedOutput = JSON.parse(lastLine) as Record<string, unknown>;
-        if (parsedOutput && typeof parsedOutput.value === "number") {
+        if (parsedOutput && typeof parsedOutput.value === "number" && Number.isFinite(parsedOutput.value)) {
           numericValue = parsedOutput.value;
-          if (typeof expected_value === "number") {
-            const tol = tolerance ?? 0.05 * Math.abs(expected_value);
+          if (typeof expected_value === "number" && Number.isFinite(expected_value)) {
+            const tol =
+              typeof tolerance === "number" && Number.isFinite(tolerance) && tolerance >= 0
+                ? tolerance
+                : 0.05 * Math.abs(expected_value);
             isCorrect = Math.abs(numericValue - expected_value) <= tol;
           } else {
             isCorrect = true;
