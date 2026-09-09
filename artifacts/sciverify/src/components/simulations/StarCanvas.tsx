@@ -60,12 +60,12 @@ export function StarCanvas({ data, isPlaying, speed }: StarCanvasProps) {
     });
     resizeObserver.observe(canvas);
 
-    // Convective granules configuration (bounded pool)
-    const granulesCount = 45;
+      // Convective granules configuration (bounded pool)
+    const granulesCount = 40;
     const granules = Array.from({ length: granulesCount }, (_, i) => ({
       angle: (i / granulesCount) * Math.PI * 2 + Math.random() * 0.2,
       distRatio: 0.15 + Math.random() * 0.75,
-      size: 6 + Math.random() * 12,
+      size: 8 + Math.random() * 10,
       phase: Math.random() * Math.PI * 2,
       speed: 0.8 + Math.random() * 0.6,
     }));
@@ -80,13 +80,34 @@ export function StarCanvas({ data, isPlaying, speed }: StarCanvasProps) {
     }));
 
     // Background micro-stars for starfield depth
-    const bgStars = Array.from({ length: 100 }, (_, i) => ({
+    const bgStars = Array.from({ length: 80 }, (_, i) => ({
       xRatio: Math.abs(Math.sin(i * 19.3 + 2.1)),
       yRatio: Math.abs(Math.cos(i * 11.5 + 4.7)),
       size: 0.8 + (i % 3) * 0.4,
       speed: 0.8 + (i % 4) * 0.6,
       phase: (i % 10) * 0.5,
     }));
+
+    const baseColor = data.calculated.color_hex || "#fff2e6";
+
+    // Pre-render a cached radial granule sprite once onto an offscreen canvas
+    // This eliminates 40-45 radial gradient allocations per animation frame
+    const granuleCanvas = document.createElement("canvas");
+    const granuleDim = 48;
+    granuleCanvas.width = granuleDim;
+    granuleCanvas.height = granuleDim;
+    const gCtx = granuleCanvas.getContext("2d");
+    if (gCtx) {
+      const hDim = granuleDim / 2;
+      const sprGrad = gCtx.createRadialGradient(hDim, hDim, 0, hDim, hDim, hDim);
+      sprGrad.addColorStop(0, "rgba(255, 255, 255, 0.95)");
+      sprGrad.addColorStop(0.5, hexToRgba(baseColor, 0.7));
+      sprGrad.addColorStop(1, "transparent");
+      gCtx.fillStyle = sprGrad;
+      gCtx.beginPath();
+      gCtx.arc(hDim, hDim, hDim, 0, Math.PI * 2);
+      gCtx.fill();
+    }
 
     const render = () => {
       if (destroyed) return;
@@ -109,7 +130,7 @@ export function StarCanvas({ data, isPlaying, speed }: StarCanvasProps) {
       const cx = width / 2;
       const cy = height / 2;
 
-      // 0. Background Nebula & Micro-stars
+      // 0. Background Nebula
       const nebGrad = ctx.createRadialGradient(cx, cy, 10, cx, cy, Math.max(width, height) * 0.6);
       nebGrad.addColorStop(0, "rgba(25, 18, 45, 0.3)");
       nebGrad.addColorStop(0.6, "rgba(8, 12, 28, 0.15)");
@@ -117,24 +138,25 @@ export function StarCanvas({ data, isPlaying, speed }: StarCanvasProps) {
       ctx.fillStyle = nebGrad;
       ctx.fillRect(0, 0, width, height);
 
-      bgStars.forEach((s) => {
-        const twinkle = 0.35 + 0.65 * Math.sin(t * s.speed + s.phase);
-        ctx.fillStyle = `rgba(220, 235, 255, ${twinkle * 0.75})`;
-        ctx.beginPath();
-        ctx.arc(s.xRatio * width, s.yRatio * height, s.size, 0, Math.PI * 2);
-        ctx.fill();
-      });
+      // Batched micro-stars (single beginPath/fill call instead of 100 separate paths)
+      ctx.fillStyle = "rgba(220, 235, 255, 0.65)";
+      ctx.beginPath();
+      for (let i = 0; i < bgStars.length; i++) {
+        const s = bgStars[i];
+        const sx = s.xRatio * width;
+        const sy = s.yRatio * height;
+        ctx.moveTo(sx + s.size, sy);
+        ctx.arc(sx, sy, s.size, 0, Math.PI * 2);
+      }
+      ctx.fill();
 
       // Base radius scaled logarithmically to fit canvas nicely while showing contrast
       const radiusRsun = data.inputs.radius_rsun;
       const minDimension = Math.min(width, height);
-      // Map 0.1 R_sun -> 0.15 size, 1.0 R_sun -> 0.28 size, 1000 R_sun -> 0.42 size
       const scaleFactor = 0.22 + 0.05 * Math.log10(Math.max(0.05, radiusRsun));
       const starRadius = Math.max(35, Math.min(minDimension * 0.42, minDimension * scaleFactor));
 
-      const baseColor = data.calculated.color_hex || "#fff2e6";
-
-      // 1. Outer Corona Glow (Multilayer Radial Gradient with bloom)
+      // 1. Outer Corona Glow
       const coronaRadius = starRadius * 2.6;
       const coronaGrad = ctx.createRadialGradient(cx, cy, Math.max(1, starRadius * 0.75), cx, cy, Math.max(2, coronaRadius));
       coronaGrad.addColorStop(0, hexToRgba(baseColor, 0.65));
@@ -147,8 +169,9 @@ export function StarCanvas({ data, isPlaying, speed }: StarCanvasProps) {
       ctx.arc(cx, cy, coronaRadius, 0, Math.PI * 2);
       ctx.fill();
 
-      // 2. Solar Prominence Flares / Arcs
-      flares.forEach((flare, idx) => {
+      // 2. Solar Prominence Flares / Arcs (dual stroke for bloom without costly shadowBlur)
+      for (let idx = 0; idx < flares.length; idx++) {
+        const flare = flares[idx];
         const angle = flare.baseAngle + Math.sin(t * 0.3 + idx) * 0.1;
         const pulse = 1 + Math.sin(t * flare.speed + idx * 2) * 0.25;
         const flareDist = starRadius * (1 + flare.lengthRatio * pulse);
@@ -157,24 +180,27 @@ export function StarCanvas({ data, isPlaying, speed }: StarCanvasProps) {
         const yBase = cy + Math.sin(angle) * starRadius;
         const xTip = cx + Math.cos(angle) * flareDist;
         const yTip = cy + Math.sin(angle) * flareDist;
-
-        ctx.strokeStyle = hexToRgba(baseColor, 0.8);
-        ctx.lineWidth = 2.5;
-        ctx.shadowColor = baseColor;
-        ctx.shadowBlur = 12;
-
-        ctx.beginPath();
-        ctx.moveTo(xBase, yBase);
         const xCtrl = cx + Math.cos(angle + flare.width) * (flareDist * 1.1);
         const yCtrl = cy + Math.sin(angle + flare.width) * (flareDist * 1.1);
+
+        // Ambient soft bloom pass
+        ctx.strokeStyle = hexToRgba(baseColor, 0.3);
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.moveTo(xBase, yBase);
         ctx.quadraticCurveTo(xCtrl, yCtrl, xTip, yTip);
         ctx.stroke();
 
-        ctx.shadowBlur = 0; // reset
-      });
+        // Core bright line pass
+        ctx.strokeStyle = hexToRgba(baseColor, 0.9);
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(xBase, yBase);
+        ctx.quadraticCurveTo(xCtrl, yCtrl, xTip, yTip);
+        ctx.stroke();
+      }
 
       // 3. Photosphere Disk with Limb Darkening
-      // Limb darkening: Core is brighter, edge is darker
       const diskGrad = ctx.createRadialGradient(
         cx - starRadius * 0.15,
         cy - starRadius * 0.15,
@@ -186,38 +212,31 @@ export function StarCanvas({ data, isPlaying, speed }: StarCanvasProps) {
       diskGrad.addColorStop(0, "#ffffff");
       diskGrad.addColorStop(0.4, hexToRgba(baseColor, 1));
       diskGrad.addColorStop(0.85, hexToRgba(baseColor, 0.87));
-      diskGrad.addColorStop(1, "#100808"); // Limb darkening absorption edge
+      diskGrad.addColorStop(1, "#100808");
 
       ctx.fillStyle = diskGrad;
       ctx.beginPath();
       ctx.arc(cx, cy, starRadius, 0, Math.PI * 2);
       ctx.fill();
 
-      // 4. Convective Granulation Overlay
+      // 4. Convective Granulation Overlay via fast GPU sprite blitting
       ctx.save();
       ctx.beginPath();
       ctx.arc(cx, cy, Math.max(1, starRadius - 1), 0, Math.PI * 2);
       ctx.clip();
 
-      granules.forEach((g) => {
+      for (let i = 0; i < granules.length; i++) {
+        const g = granules[i];
         const drift = t * 0.15 * g.speed;
         const currentAngle = g.angle + drift;
         const gx = cx + Math.cos(currentAngle) * (starRadius * g.distRatio);
         const gy = cy + Math.sin(currentAngle) * (starRadius * g.distRatio);
 
         const pulse = 0.5 + 0.5 * Math.sin(t * 1.2 * g.speed + g.phase);
-        const alpha = 0.12 + 0.15 * pulse;
-
-        const gGrad = ctx.createRadialGradient(gx, gy, 0, gx, gy, Math.max(1, g.size));
-        gGrad.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
-        gGrad.addColorStop(0.6, hexToRgba(baseColor, alpha));
-        gGrad.addColorStop(1, "transparent");
-
-        ctx.fillStyle = gGrad;
-        ctx.beginPath();
-        ctx.arc(gx, gy, g.size, 0, Math.PI * 2);
-        ctx.fill();
-      });
+        ctx.globalAlpha = 0.12 + 0.18 * pulse;
+        const d = g.size * 2;
+        ctx.drawImage(granuleCanvas, gx - g.size, gy - g.size, d, d);
+      }
 
       ctx.restore();
 

@@ -134,3 +134,46 @@ export function fetchSummary() {
 export function fetchCalibration() {
   return apiFetch<CalibrationReport>('/api/metrics/calibration');
 }
+
+export interface DatasetRecord {
+  id: string;
+  name: string;
+  domain: Domain;
+  records: string;
+  source: string;
+  license: string;
+  version: string;
+  updated: string;
+  description: string;
+  taskId?: string;
+}
+
+export function fetchDatasets() {
+  return apiFetch<DatasetRecord[]>('/api/datasets');
+}
+
+export function createDataset(payload: {
+  name: string;
+  domain?: Domain;
+  records?: string;
+  source?: string;
+  license?: string;
+  version?: string;
+  description?: string;
+  taskId?: string;
+}) {
+  return apiFetch<DatasetRecord>('/api/datasets', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function attachDatasetToTask(taskId: string, datasetName: string) {
+  return apiFetch<{ success: boolean; taskId: string; dataset: string }>(
+    `/api/tasks/${encodeURIComponent(taskId)}/dataset`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ datasetName }),
+    }
+  );
+}

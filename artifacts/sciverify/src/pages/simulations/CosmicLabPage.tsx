@@ -29,6 +29,11 @@ import {
   fetchBlackHoleSimulation,
   fetchQuasarSimulation,
   verifyInSandbox,
+  calculateStarFallback,
+  calculatePulsarFallback,
+  calculateAsteroidFallback,
+  calculateBlackHoleFallback,
+  calculateQuasarFallback,
   STAR_PRESETS,
   PULSAR_PRESETS,
   ASTEROID_PRESETS,
@@ -68,25 +73,25 @@ export function CosmicLabPage({ Shell, PageHeader }: { Shell: React.ComponentTyp
   const [verifying, setVerifying] = useState<boolean>(false);
   const [verificationResult, setVerificationResult] = useState<SandboxVerificationResponse | null>(null);
 
-  // 1. Star state
+  // 1. Star state (pre-initialized for instant zero-latency rendering)
   const [starParams, setStarParams] = useState(STAR_PRESETS[0].params);
-  const [starResult, setStarResult] = useState<StarResult | null>(null);
+  const [starResult, setStarResult] = useState<StarResult>(() => calculateStarFallback(STAR_PRESETS[0].params));
 
   // 2. Pulsar state
   const [pulsarParams, setPulsarParams] = useState(PULSAR_PRESETS[0].params);
-  const [pulsarResult, setPulsarResult] = useState<PulsarResult | null>(null);
+  const [pulsarResult, setPulsarResult] = useState<PulsarResult>(() => calculatePulsarFallback(PULSAR_PRESETS[0].params));
 
-  // 3. Asteroid state
+  // 3. Asteroid state (pre-initialized for instant zero-latency rendering)
   const [asteroidParams, setAsteroidParams] = useState(ASTEROID_PRESETS[0].params);
-  const [asteroidResult, setAsteroidResult] = useState<AsteroidResult | null>(null);
+  const [asteroidResult, setAsteroidResult] = useState<AsteroidResult>(() => calculateAsteroidFallback(ASTEROID_PRESETS[0].params));
 
   // 4. Black hole state
   const [blackHoleParams, setBlackHoleParams] = useState(BLACK_HOLE_PRESETS[0].params);
-  const [blackHoleResult, setBlackHoleResult] = useState<BlackHoleResult | null>(null);
+  const [blackHoleResult, setBlackHoleResult] = useState<BlackHoleResult>(() => calculateBlackHoleFallback(BLACK_HOLE_PRESETS[0].params));
 
   // 5. Quasar state
   const [quasarParams, setQuasarParams] = useState(QUASAR_PRESETS[0].params);
-  const [quasarResult, setQuasarResult] = useState<QuasarResult | null>(null);
+  const [quasarResult, setQuasarResult] = useState<QuasarResult>(() => calculateQuasarFallback(QUASAR_PRESETS[0].params));
 
   // Active verification script
   const activeScript =
@@ -474,6 +479,7 @@ export function CosmicLabPage({ Shell, PageHeader }: { Shell: React.ComponentTyp
                         key={preset.name}
                         onClick={() => {
                           setStarParams(preset.params);
+                          setStarResult(calculateStarFallback(preset.params));
                           void runStar(preset.params);
                         }}
                         className={`rounded border p-2 text-left text-xs transition-colors ${
@@ -494,6 +500,7 @@ export function CosmicLabPage({ Shell, PageHeader }: { Shell: React.ComponentTyp
                         key={preset.name}
                         onClick={() => {
                           setPulsarParams(preset.params);
+                          setPulsarResult(calculatePulsarFallback(preset.params));
                           void runPulsar(preset.params);
                         }}
                         className={`rounded border p-2 text-left text-xs transition-colors ${
@@ -513,6 +520,7 @@ export function CosmicLabPage({ Shell, PageHeader }: { Shell: React.ComponentTyp
                         key={preset.name}
                         onClick={() => {
                           setAsteroidParams(preset.params);
+                          setAsteroidResult(calculateAsteroidFallback(preset.params));
                           void runAsteroid(preset.params);
                         }}
                         className={`rounded border p-2 text-left text-xs transition-colors ${
@@ -532,6 +540,7 @@ export function CosmicLabPage({ Shell, PageHeader }: { Shell: React.ComponentTyp
                         key={preset.name}
                         onClick={() => {
                           setBlackHoleParams(preset.params);
+                          setBlackHoleResult(calculateBlackHoleFallback(preset.params));
                           void runBlackHole(preset.params);
                         }}
                         className={`rounded border p-2 text-left text-xs transition-colors ${
@@ -551,6 +560,7 @@ export function CosmicLabPage({ Shell, PageHeader }: { Shell: React.ComponentTyp
                         key={preset.name}
                         onClick={() => {
                           setQuasarParams(preset.params);
+                          setQuasarResult(calculateQuasarFallback(preset.params));
                           void runQuasar(preset.params);
                         }}
                         className={`rounded border p-2 text-left text-xs transition-colors ${

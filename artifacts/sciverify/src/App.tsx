@@ -20,10 +20,22 @@ import { Link, Route, Switch, useLocation, Router as WouterRouter } from 'wouter
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip as ChartTooltip, XAxis, YAxis } from 'recharts';
 import type { Domain, Evaluation, ScientificTask } from '@/lib/mock-data';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
+import {
   useFixtureQuery,
   useHarnessView,
   useResultQuery,
   useRunFixtureMutation,
+  useDatasetsQuery,
+  useCreateDatasetMutation,
+  useAttachDatasetMutation,
 } from '@/hooks/use-harness-data';
 import { fixtureToTask, formatPct } from '@/lib/harness-map';
 
@@ -302,14 +314,537 @@ function Landing() {
   </div>;
 }
 
+function AddDatasetDialog({
+  open,
+  onOpenChange,
+  defaultTaskId,
+  onSuccess,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  defaultTaskId?: string;
+  onSuccess?: (datasetName: string) => void;
+}) {
+  const { toast } = useToast();
+  const createMutation = useCreateDatasetMutation();
+  const [name, setName] = useState('');
+  const [domain, setDomain] = useState<Domain>('Physics');
+  const [description, setDescription] = useState('');
+  const [source, setSource] = useState('');
+  const [records, setRecords] = useState('');
+  const [license, setLicense] = useState('CC BY 4.0');
+  const [version, setVersion] = useState('v1.0');
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      setFormError('Dataset name is required.');
+      return;
+    }
+    setFormError(null);
+    try {
+      const res = await createMutation.mutateAsync({
+        name: name.trim(),
+        domain,
+        description: description.trim() || undefined,
+        source: source.trim() || undefined,
+        records: records.trim() || undefined,
+        license: license.trim() || undefined,
+        version: version.trim() || undefined,
+        taskId: defaultTaskId,
+      });
+      toast({
+        title: 'Dataset Created',
+        description: `"${res.name}" has been registered successfully.`,
+      });
+      onSuccess?.(res.name);
+      onOpenChange(false);
+      setName('');
+      setDescription('');
+      setSource('');
+      setRecords('');
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Failed to create dataset.');
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Database className="size-5 text-primary" />
+            Add New Dataset
+          </DialogTitle>
+          <DialogDescription>
+            Register a curated scientific data source for reproducibility and benchmarking.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+          {formError && (
+            <div className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300">
+              {formError}
+            </div>
+          )}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-foreground">Dataset Name *</label>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. NOAA Station Temperatures 2024"
+              className="text-xs"
+              data-testid="input-dataset-name"
+              required
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground">Domain</label>
+              <select
+                value={domain}
+                onChange={(e) => setDomain(e.target.value as Domain)}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                data-testid="select-dataset-domain"
+              >
+                {['Physics', 'Earth Science', 'Astronomy', 'Climate', 'Data Analysis'].map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground">Version</label>
+              <Input
+                value={version}
+                onChange={(e) => setVersion(e.target.value)}
+                placeholder="v1.0"
+                className="text-xs"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground">Source / Provenance</label>
+              <Input
+                value={source}
+                onChange={(e) => setSource(e.target.value)}
+                placeholder="e.g. NASA JPL / NOAA"
+                className="text-xs"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground">Record Count</label>
+              <Input
+                value={records}
+                onChange={(e) => setRecords(e.target.value)}
+                placeholder="e.g. 25,000 samples"
+                className="text-xs"
+              />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-foreground">Description</label>
+            <Input
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Brief context and variables included..."
+              className="text-xs"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-foreground">License</label>
+            <Input
+              value={license}
+              onChange={(e) => setLicense(e.target.value)}
+              placeholder="e.g. CC BY 4.0 / Public Domain"
+              className="text-xs"
+            />
+          </div>
+          <DialogFooter className="pt-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={createMutation.isPending}
+              data-testid="button-submit-dataset"
+            >
+              {createMutation.isPending ? 'Saving...' : 'Add Dataset'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AttachDatasetToTaskDialog({
+  taskId,
+  taskTitle,
+  currentDataset,
+  open,
+  onOpenChange,
+  onAttached,
+}: {
+  taskId: string;
+  taskTitle: string;
+  currentDataset: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onAttached: (datasetName: string) => void;
+}) {
+  const { toast } = useToast();
+  const { datasets } = useHarnessView();
+  const attachMutation = useAttachDatasetMutation();
+  const [selectedDataset, setSelectedDataset] = useState(currentDataset);
+  const [tab, setTab] = useState<'choose' | 'create'>('choose');
+  const [search, setSearch] = useState('');
+  const [isAttaching, setIsAttaching] = useState(false);
+
+  useEffect(() => {
+    setSelectedDataset(currentDataset);
+  }, [currentDataset, open]);
+
+  const filteredDatasets = datasets.filter((d) =>
+    `${d.name} ${d.domain} ${d.description}`.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const handleAttachExisting = async () => {
+    if (!selectedDataset) return;
+    setIsAttaching(true);
+    try {
+      await attachMutation.mutateAsync({
+        taskId,
+        datasetName: selectedDataset,
+      });
+      toast({
+        title: 'Dataset Attached',
+        description: `Successfully attached "${selectedDataset}" to ${taskTitle}.`,
+      });
+      onAttached(selectedDataset);
+      onOpenChange(false);
+    } catch (err) {
+      toast({
+        title: 'Error attaching dataset',
+        description: err instanceof Error ? err.message : 'Request failed',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsAttaching(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Database className="size-5 text-primary" />
+            Attach Dataset to Scientific Task
+          </DialogTitle>
+          <DialogDescription>
+            Link a verified dataset to <span className="font-semibold text-foreground">{taskTitle}</span> to ground evaluations in reproducible data.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex gap-2 border-b border-border/80 pb-2 text-xs">
+          <button
+            type="button"
+            onClick={() => setTab('choose')}
+            className={`rounded-md px-3 py-1.5 font-semibold transition-colors ${
+              tab === 'choose' ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Choose Existing ({datasets.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab('create')}
+            className={`rounded-md px-3 py-1.5 font-semibold transition-colors ${
+              tab === 'create' ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Create New & Attach
+          </button>
+        </div>
+
+        {tab === 'choose' ? (
+          <div className="space-y-4 pt-1">
+            <div className="relative">
+              <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search available datasets..."
+                className="h-9 pl-9 text-xs"
+              />
+            </div>
+            <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
+              {filteredDatasets.map((ds) => {
+                const isSelected = selectedDataset === ds.name;
+                return (
+                  <div
+                    key={ds.id}
+                    onClick={() => setSelectedDataset(ds.name)}
+                    className={`cursor-pointer rounded-lg border p-3 text-xs transition-colors ${
+                      isSelected
+                        ? 'border-primary bg-primary/10 shadow-sm ring-1 ring-primary'
+                        : 'border-border/70 bg-card/60 hover:border-border hover:bg-secondary/40'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="font-semibold text-foreground">{ds.name}</div>
+                      <Badge variant="outline" className="text-[10px]">
+                        {ds.domain}
+                      </Badge>
+                    </div>
+                    <p className="mt-1 line-clamp-1 text-[11px] text-muted-foreground">{ds.description}</p>
+                    <div className="mt-2 flex items-center gap-3 text-[10px] text-muted-foreground">
+                      <span>Source: {ds.source}</span>
+                      <span>•</span>
+                      <span>Records: {ds.records}</span>
+                    </div>
+                  </div>
+                );
+              })}
+              {filteredDatasets.length === 0 && (
+                <div className="py-8 text-center text-xs text-muted-foreground">
+                  No matching datasets found.
+                </div>
+              )}
+            </div>
+            <DialogFooter className="pt-2">
+              <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleAttachExisting}
+                disabled={!selectedDataset || isAttaching}
+                data-testid="button-confirm-attach-dataset"
+              >
+                {isAttaching ? 'Attaching...' : 'Attach Selected Dataset'}
+              </Button>
+            </DialogFooter>
+          </div>
+        ) : (
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const fd = new FormData(e.currentTarget);
+              const dsName = String(fd.get('name') || '').trim();
+              if (!dsName) return;
+              setIsAttaching(true);
+              try {
+                await attachMutation.mutateAsync({
+                  taskId,
+                  datasetName: dsName,
+                });
+                toast({
+                  title: 'Dataset Created & Attached',
+                  description: `"${dsName}" attached to ${taskTitle}.`,
+                });
+                onAttached(dsName);
+                onOpenChange(false);
+              } catch (err) {
+                toast({
+                  title: 'Error',
+                  description: err instanceof Error ? err.message : 'Failed',
+                  variant: 'destructive',
+                });
+              } finally {
+                setIsAttaching(false);
+              }
+            }}
+            className="space-y-3 pt-2"
+          >
+            <div className="space-y-1">
+              <label className="text-xs font-semibold">Dataset Name *</label>
+              <Input name="name" placeholder="e.g. Custom Solar Radiation Data" required className="text-xs" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold">Source / Reference</label>
+              <Input name="source" placeholder="e.g. Internal Laboratory / NOAA" className="text-xs" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold">Description</label>
+              <Input name="description" placeholder="Description of data..." className="text-xs" />
+            </div>
+            <DialogFooter className="pt-3">
+              <Button variant="outline" size="sm" type="button" onClick={() => setTab('choose')}>
+                Back
+              </Button>
+              <Button size="sm" type="submit" disabled={isAttaching}>
+                {isAttaching ? 'Creating...' : 'Create & Attach'}
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AddTaskDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const { toast } = useToast();
+  const [title, setTitle] = useState('');
+  const [domain, setDomain] = useState<Domain>('Physics');
+  const [difficulty, setDifficulty] = useState<'Beginner' | 'Intermediate' | 'Advanced'>('Intermediate');
+  const [question, setQuestion] = useState('');
+  const [dataset, setDataset] = useState('Pinned Newtonian constants');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim() || !question.trim()) return;
+    toast({
+      title: 'Scientific Task Registered',
+      description: `Task "${title}" created and ready for verification.`,
+    });
+    onOpenChange(false);
+    setTitle('');
+    setQuestion('');
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <FlaskConical className="size-5 text-primary" />
+            Add Scientific Task
+          </DialogTitle>
+          <DialogDescription>
+            Define a new problem with verifiable inputs, rubric criteria, and ground truth references.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-3 pt-2">
+          <div className="space-y-1">
+            <label className="text-xs font-semibold">Task Title *</label>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Relativistic Doppler Shift" required className="text-xs" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs font-semibold">Domain</label>
+              <select
+                value={domain}
+                onChange={(e) => setDomain(e.target.value as Domain)}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-xs text-foreground"
+              >
+                {['Physics', 'Earth Science', 'Astronomy', 'Climate', 'Data Analysis'].map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold">Difficulty</label>
+              <select
+                value={difficulty}
+                onChange={(e) => setDifficulty(e.target.value as any)}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-xs text-foreground"
+              >
+                {['Beginner', 'Intermediate', 'Advanced'].map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-semibold">Scientific Question / Prompt *</label>
+            <Input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Simulate or calculate the exact formula..." required className="text-xs" />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-semibold">Attached Dataset</label>
+            <Input value={dataset} onChange={(e) => setDataset(e.target.value)} placeholder="e.g. Pinned Newtonian constants" className="text-xs" />
+          </div>
+          <DialogFooter className="pt-3">
+            <Button variant="outline" size="sm" type="button" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button size="sm" type="submit">Create Task</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function TasksPage() {
   const { tasks, isLoading, error } = useHarnessView();
   const [filter, setFilter] = useState<Domain | 'All'>('All');
   const [query, setQuery] = useState('');
+  const [addTaskOpen, setAddTaskOpen] = useState(false);
   const filtered = tasks.filter((task) => (filter === 'All' || task.domain === filter) && `${task.title} ${task.description}`.toLowerCase().includes(query.toLowerCase()));
   const filters: (Domain | 'All')[] = ['All', 'Physics', 'Earth Science', 'Astronomy', 'Climate', 'Data Analysis'];
 
-  return <Shell><PageHeader eyebrow="Fixture library" title="Scientific tasks" description="Curated problems with explicit inputs, reference methods, and verifiable outputs." actions={<Button onClick={() => setFilter('All')} variant="outline" data-testid="button-add-task"><Plus className="size-4" /> Add task</Button>} />{error && <div className="mb-6 rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-xs text-red-300">Failed to load scientific tasks: {error instanceof Error ? error.message : String(error)}</div>}<div className="mb-7 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between"><div className="flex flex-wrap gap-1.5">{filters.map((item) => <button key={item} onClick={() => setFilter(item)} className={`rounded-md border px-3 py-1.5 text-[11px] font-semibold transition-colors ${filter === item ? 'border-primary/40 bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:bg-secondary hover:text-foreground'}`} data-testid={`button-filter-${item.toLowerCase().replaceAll(' ', '-')}`}>{item}</button>)}</div><div className="relative w-full xl:w-64"><Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" /><Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search fixtures..." className="h-9 pl-9 text-xs" data-testid="input-search-tasks" /></div></div><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{filtered.map((task, index) => <TaskCard task={task} index={index} key={task.id} />)}</div>{filtered.length === 0 && <EmptyState title="No fixtures found" copy={isLoading ? "Loading fixtures from API..." : "Try a different domain or search term."} />}</Shell>;
+  return (
+    <Shell>
+      <PageHeader
+        eyebrow="Fixture library"
+        title="Scientific tasks"
+        description="Curated problems with explicit inputs, reference methods, and verifiable outputs."
+        actions={
+          <Button onClick={() => setAddTaskOpen(true)} variant="outline" data-testid="button-add-task">
+            <Plus className="size-4" /> Add task
+          </Button>
+        }
+      />
+      {error && (
+        <div className="mb-6 rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-xs text-red-300">
+          Failed to load scientific tasks: {error instanceof Error ? error.message : String(error)}
+        </div>
+      )}
+      <div className="mb-7 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex flex-wrap gap-1.5">
+          {filters.map((item) => (
+            <button
+              key={item}
+              onClick={() => setFilter(item)}
+              className={`rounded-md border px-3 py-1.5 text-[11px] font-semibold transition-colors ${
+                filter === item
+                  ? 'border-primary/40 bg-primary/10 text-primary'
+                  : 'border-border text-muted-foreground hover:bg-secondary hover:text-foreground'
+              }`}
+              data-testid={`button-filter-${item.toLowerCase().replaceAll(' ', '-')}`}
+            >
+              {item}
+            </button>
+          ))}
+        </div>
+        <div className="relative w-full xl:w-64">
+          <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search fixtures..."
+            className="h-9 pl-9 text-xs"
+            data-testid="input-search-tasks"
+          />
+        </div>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {filtered.map((task, index) => (
+          <TaskCard task={task} index={index} key={task.id} />
+        ))}
+      </div>
+      {filtered.length === 0 && (
+        <EmptyState
+          title="No fixtures found"
+          copy={isLoading ? "Loading fixtures from API..." : "Try a different domain or search term."}
+        />
+      )}
+      <AddTaskDialog open={addTaskOpen} onOpenChange={setAddTaskOpen} />
+    </Shell>
+  );
 }
 
 function TaskCard({ task, index }: { task: ScientificTask; index: number }) {
@@ -321,23 +856,148 @@ function EmptyState({ title, copy }: { title: string; copy: string }) { return <
 function TaskDetail({ id }: { id: string }) {
   const { data: fixture, isLoading } = useFixtureQuery(id);
   const { tasks } = useHarnessView();
-  const task = fixture ? fixtureToTask(fixture) : tasks.find(t => t.id === id) || {
-    id,
-    title: isLoading ? 'Loading fixture...' : id,
-    domain: 'Physics' as const,
-    difficulty: 'Intermediate' as const,
-    description: '',
-    question: '',
-    runtime: '3–15 sec',
-    inputs: [],
-    outputs: [],
-    method: '',
-    answer: 'Withheld; computed server-side from Newtonian physics equations',
-    criteria: [],
-    dataset: 'Pinned Newtonian constants',
-  };
+  const [datasetModalOpen, setDatasetModalOpen] = useState(false);
+  const [localDataset, setLocalDataset] = useState<string | null>(null);
 
-  return <Shell><div className="mb-6 flex items-center gap-2 text-xs text-muted-foreground"><Link href="/tasks" className="hover:text-primary">Scientific tasks</Link><ChevronRight className="size-3" /><span className="text-foreground">{task.title}</span></div><PageHeader eyebrow={`${task.domain} / ${task.difficulty}`} title={task.title} description={task.description} actions={<Link href={`/run?task=${task.id}`}><Button data-testid="button-task-run" className="transition-all duration-150 active:scale-[0.97] hover:shadow-md hover:shadow-primary/25"><Play className="size-3.5" /> Run evaluation</Button></Link>} /><div className="grid gap-5 xl:grid-cols-[1.35fr_.65fr]"><div className="space-y-5"><Card className="panel-glow"><CardHeader><CardTitle className="text-sm">Scientific problem</CardTitle></CardHeader><CardContent><p className="text-lg leading-8 text-foreground">{task.question}</p><div className="mt-6 grid gap-4 sm:grid-cols-2"><InfoBlock title="Expected inputs" items={task.inputs} /><InfoBlock title="Expected outputs" items={task.outputs} /></div></CardContent></Card><Card className="panel-glow"><CardHeader><CardTitle className="text-sm">Evaluation criteria</CardTitle><p className="text-xs text-muted-foreground">Checks applied to every generated result</p></CardHeader><CardContent><div className="grid gap-2 sm:grid-cols-2">{task.criteria.map((item) => <div key={item} className="flex items-start gap-2 rounded-md border border-border/70 bg-secondary/30 p-3 text-xs text-muted-foreground"><Check className="mt-0.5 size-3.5 shrink-0 text-emerald-300" />{item}</div>)}</div></CardContent></Card></div><div className="space-y-5"><Card className="panel-glow"><CardHeader><CardTitle className="text-sm">Reference answer</CardTitle></CardHeader><CardContent><div className="rounded-md border border-primary/20 bg-primary/[.05] p-4 font-mono text-sm text-primary">{task.answer}</div><p className="mt-4 text-xs leading-5 text-muted-foreground">{task.method}</p></CardContent></Card><Card className="panel-glow"><CardHeader><CardTitle className="text-sm">Fixture metadata</CardTitle></CardHeader><CardContent className="space-y-3 text-xs"><MetaRow label="Dataset" value={task.dataset} /><MetaRow label="Expected runtime" value={task.runtime} /><MetaRow label="Language" value="Python 3" /><MetaRow label="Reference" value="Newtonian ground truth" /></CardContent></Card><Card className="border-primary/20 bg-primary/[.04]"><CardContent className="p-5"><div className="flex items-center gap-2 text-sm font-semibold"><ShieldCheck className="size-4 text-primary" /> Reference solution verified</div><p className="mt-2 text-xs leading-5 text-muted-foreground">Grading compares agent execution output against ground-truth equations with tolerance rules.</p><Button variant="outline" size="sm" className="mt-4" onClick={() => navigator.clipboard?.writeText(task.method)} data-testid="button-copy-reference"><Copy className="size-3.5" /> Copy method</Button></CardContent></Card></div></div></Shell>;
+  const baseTask = fixture ? fixtureToTask(fixture) : tasks.find((t) => t.id === id);
+  const task = baseTask
+    ? { ...baseTask, dataset: localDataset ?? baseTask.dataset }
+    : {
+        id,
+        title: isLoading ? 'Loading fixture...' : id,
+        domain: 'Physics' as const,
+        difficulty: 'Intermediate' as const,
+        description: '',
+        question: '',
+        runtime: '3–15 sec',
+        inputs: [],
+        outputs: [],
+        method: '',
+        answer: 'Withheld; computed server-side from Newtonian physics equations',
+        criteria: [],
+        dataset: localDataset ?? 'Pinned Newtonian constants',
+      };
+
+  return (
+    <Shell>
+      <div className="mb-6 flex items-center gap-2 text-xs text-muted-foreground">
+        <Link href="/tasks" className="hover:text-primary">Scientific tasks</Link>
+        <ChevronRight className="size-3" />
+        <span className="text-foreground">{task.title}</span>
+      </div>
+      <PageHeader
+        eyebrow={`${task.domain} / ${task.difficulty}`}
+        title={task.title}
+        description={task.description}
+        actions={
+          <Link href={`/run?task=${task.id}`}>
+            <Button data-testid="button-task-run" className="transition-all duration-150 active:scale-[0.97] hover:shadow-md hover:shadow-primary/25">
+              <Play className="size-3.5" /> Run evaluation
+            </Button>
+          </Link>
+        }
+      />
+      <div className="grid gap-5 xl:grid-cols-[1.35fr_.65fr]">
+        <div className="space-y-5">
+          <Card className="panel-glow">
+            <CardHeader>
+              <CardTitle className="text-sm">Scientific problem</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-lg leading-8 text-foreground">{task.question}</p>
+              <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                <InfoBlock title="Expected inputs" items={task.inputs} />
+                <InfoBlock title="Expected outputs" items={task.outputs} />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="panel-glow">
+            <CardHeader>
+              <CardTitle className="text-sm">Evaluation criteria</CardTitle>
+              <p className="text-xs text-muted-foreground">Checks applied to every generated result</p>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {task.criteria.map((item) => (
+                  <div key={item} className="flex items-start gap-2 rounded-md border border-border/70 bg-secondary/30 p-3 text-xs text-muted-foreground">
+                    <Check className="mt-0.5 size-3.5 shrink-0 text-emerald-300" />
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        <div className="space-y-5">
+          <Card className="panel-glow">
+            <CardHeader>
+              <CardTitle className="text-sm">Reference answer</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border border-primary/20 bg-primary/[.05] p-4 font-mono text-sm text-primary">
+                {task.answer}
+              </div>
+              <p className="mt-4 text-xs leading-5 text-muted-foreground">{task.method}</p>
+            </CardContent>
+          </Card>
+          <Card className="panel-glow">
+            <CardHeader>
+              <CardTitle className="text-sm">Fixture metadata</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-xs">
+              <div className="flex items-center justify-between gap-3 border-b border-border/60 pb-3">
+                <span className="text-muted-foreground">Dataset</span>
+                <div className="flex items-center gap-2">
+                  <span className="max-w-[160px] truncate text-right font-mono text-[10px] font-medium text-foreground sm:max-w-[220px]">
+                    {task.dataset}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-6 gap-1 px-2 text-[10px] text-primary border-primary/30 hover:bg-primary/10"
+                    onClick={() => setDatasetModalOpen(true)}
+                    data-testid="button-attach-dataset"
+                  >
+                    <Plus className="size-3" /> Add dataset
+                  </Button>
+                </div>
+              </div>
+              <MetaRow label="Expected runtime" value={task.runtime} />
+              <MetaRow label="Language" value="Python 3" />
+              <MetaRow label="Reference" value="Newtonian ground truth" />
+            </CardContent>
+          </Card>
+          <Card className="border-primary/20 bg-primary/[.04]">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <ShieldCheck className="size-4 text-primary" /> Reference solution verified
+              </div>
+              <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                Grading compares agent execution output against ground-truth equations with tolerance rules.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-4"
+                onClick={() => navigator.clipboard?.writeText(task.method)}
+                data-testid="button-copy-reference"
+              >
+                <Copy className="size-3.5" /> Copy method
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+      <AttachDatasetToTaskDialog
+        taskId={task.id}
+        taskTitle={task.title}
+        currentDataset={task.dataset}
+        open={datasetModalOpen}
+        onOpenChange={setDatasetModalOpen}
+        onAttached={(datasetName) => setLocalDataset(datasetName)}
+      />
+    </Shell>
+  );
 }
 
 function InfoBlock({ title, items }: { title: string; items: string[] }) { return <div><div className="mb-2 text-[10px] font-bold uppercase tracking-[.15em] text-muted-foreground">{title}</div><div className="space-y-1.5">{items.map((item) => <div key={item} className="flex gap-2 text-xs text-foreground"><span className="mt-1.5 size-1 rounded-full bg-primary" />{item}</div>)}</div></div>; }
@@ -661,8 +1321,77 @@ function ComparisonPage() {
 function DatasetsPage() {
   const { datasets } = useHarnessView();
   const [query, setQuery] = useState('');
+  const [addModalOpen, setAddModalOpen] = useState(false);
   const filtered = datasets.filter((d) => `${d.name} ${d.source} ${d.domain}`.toLowerCase().includes(query.toLowerCase()));
-  return <Shell><PageHeader eyebrow="Data provenance" title="Datasets" description="Pinned sources keep scientific comparisons fair, inspectable, and reproducible." actions={<Button onClick={() => setQuery('')} data-testid="button-upload-dataset"><Upload className="size-3.5" /> Add dataset</Button>} /><div className="mb-6 flex items-center justify-between"><div className="relative w-full max-w-xs"><Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" /><Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search datasets..." className="h-9 pl-9 text-xs" data-testid="input-search-datasets" /></div><div className="hidden items-center gap-2 text-xs text-muted-foreground sm:flex"><HardDrive className="size-4" /> {datasets.length} sources indexed</div></div><div className="grid gap-4 md:grid-cols-2">{filtered.map((dataset) => <Card key={dataset.id} className="panel-glow group"><CardHeader><div className="flex items-start justify-between"><div className="grid size-10 place-items-center rounded-lg bg-primary/10 text-primary"><Database className="size-5" /></div><Badge variant="outline" className="text-[10px]">{dataset.version}</Badge></div><CardTitle className="mt-4 text-base group-hover:text-primary">{dataset.name}</CardTitle><p className="text-xs leading-5 text-muted-foreground">{dataset.description}</p></CardHeader><CardContent><div className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border/70 pt-4 text-xs"><MetaRow label="Domain" value={dataset.domain} /><MetaRow label="Fixtures" value={dataset.records} /><MetaRow label="Source" value={dataset.source} /><MetaRow label="License" value={dataset.license} /></div><div className="mt-5 flex items-center justify-between text-[10px] text-muted-foreground"><span>Updated {dataset.updated}</span><Button variant="outline" size="sm" onClick={() => navigator.clipboard?.writeText(dataset.name)} data-testid={`button-view-dataset-${dataset.id}`}>View manifest <ArrowRight className="size-3.5" /></Button></div></CardContent></Card>)}</div></Shell>;
+
+  return (
+    <Shell>
+      <PageHeader
+        eyebrow="Data provenance"
+        title="Datasets"
+        description="Pinned sources keep scientific comparisons fair, inspectable, and reproducible."
+        actions={
+          <Button onClick={() => setAddModalOpen(true)} data-testid="button-upload-dataset">
+            <Upload className="size-3.5" /> Add dataset
+          </Button>
+        }
+      />
+      <div className="mb-6 flex items-center justify-between">
+        <div className="relative w-full max-w-xs">
+          <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search datasets..."
+            className="h-9 pl-9 text-xs"
+            data-testid="input-search-datasets"
+          />
+        </div>
+        <div className="hidden items-center gap-2 text-xs text-muted-foreground sm:flex">
+          <HardDrive className="size-4" /> {datasets.length} sources indexed
+        </div>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        {filtered.map((dataset) => (
+          <Card key={dataset.id} className="panel-glow group">
+            <CardHeader>
+              <div className="flex items-start justify-between">
+                <div className="grid size-10 place-items-center rounded-lg bg-primary/10 text-primary">
+                  <Database className="size-5" />
+                </div>
+                <Badge variant="outline" className="text-[10px]">{dataset.version}</Badge>
+              </div>
+              <CardTitle className="mt-4 text-base group-hover:text-primary">{dataset.name}</CardTitle>
+              <p className="text-xs leading-5 text-muted-foreground">{dataset.description}</p>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border/70 pt-4 text-xs">
+                <MetaRow label="Domain" value={dataset.domain} />
+                <MetaRow label="Fixtures" value={dataset.records} />
+                <MetaRow label="Source" value={dataset.source} />
+                <MetaRow label="License" value={dataset.license} />
+              </div>
+              <div className="mt-5 flex items-center justify-between text-[10px] text-muted-foreground">
+                <span>Updated {dataset.updated}</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigator.clipboard?.writeText(dataset.name)}
+                  data-testid={`button-view-dataset-${dataset.id}`}
+                >
+                  View manifest <ArrowRight className="size-3.5" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      <AddDatasetDialog
+        open={addModalOpen}
+        onOpenChange={setAddModalOpen}
+      />
+    </Shell>
+  );
 }
 
 function ReportsPage() {

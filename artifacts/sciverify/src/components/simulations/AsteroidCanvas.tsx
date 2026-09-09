@@ -75,14 +75,22 @@ export function AsteroidCanvas({ data, isPlaying, speed }: AsteroidCanvasProps) 
       }
       const curTime = simTimeDaysRef.current;
 
-      // Find segment along the trajectory by time_days
+      // Fast O(log N) binary search for segment along the trajectory by time_days
+      let low = 0;
+      let high = trajectory.length - 1;
       let curIdx = 0;
-      for (let i = 0; i < trajectory.length - 1; i++) {
-        if (trajectory[i].time_days <= curTime && trajectory[i + 1].time_days >= curTime) {
-          curIdx = i;
-          break;
+      while (low <= high) {
+        const mid = (low + high) >> 1;
+        if (trajectory[mid].time_days <= curTime) {
+          curIdx = mid;
+          low = mid + 1;
+        } else {
+          high = mid - 1;
         }
       }
+      if (curIdx >= trajectory.length - 1) curIdx = trajectory.length - 2;
+      if (curIdx < 0) curIdx = 0;
+
       const nextIdx = (curIdx + 1) % trajectory.length;
       const t0 = trajectory[curIdx].time_days;
       const t1 = trajectory[nextIdx].time_days;
@@ -102,13 +110,17 @@ export function AsteroidCanvas({ data, isPlaying, speed }: AsteroidCanvasProps) 
       ctx.fillStyle = nebGrad;
       ctx.fillRect(0, 0, width, height);
 
-      bgStars.forEach((s) => {
-        const twinkle = 0.35 + 0.65 * Math.sin(curTime * 0.5 * s.speed + s.phase);
-        ctx.fillStyle = `rgba(200, 225, 255, ${twinkle * 0.75})`;
-        ctx.beginPath();
-        ctx.arc(s.xRatio * width, s.yRatio * height, s.size, 0, Math.PI * 2);
-        ctx.fill();
-      });
+      // Batched micro-stars
+      ctx.fillStyle = "rgba(200, 225, 255, 0.65)";
+      ctx.beginPath();
+      for (let i = 0; i < bgStars.length; i++) {
+        const s = bgStars[i];
+        const sx = s.xRatio * width;
+        const sy = s.yRatio * height;
+        ctx.moveTo(sx + s.size, sy);
+        ctx.arc(sx, sy, s.size, 0, Math.PI * 2);
+      }
+      ctx.fill();
 
       // Coordinate scaling: map astronomical units to canvas pixels
       // Allow orbit to fit comfortably within 80% of canvas
@@ -129,7 +141,7 @@ export function AsteroidCanvas({ data, isPlaying, speed }: AsteroidCanvasProps) 
       // Update fading trail
       if (isPlayingRef.current) {
         trailRef.current.push({ x: astPxX, y: astPxY });
-        if (trailRef.current.length > 40) {
+        if (trailRef.current.length > 35) {
           trailRef.current.shift();
         }
       }
@@ -216,14 +228,16 @@ export function AsteroidCanvas({ data, isPlaying, speed }: AsteroidCanvasProps) 
       ctx.lineTo(vEndX, vEndY);
       ctx.stroke();
 
-      // 7. Asteroid Body
-      ctx.fillStyle = "#00ffff";
-      ctx.shadowColor = "#00ffff";
-      ctx.shadowBlur = 10;
+      // 7. Asteroid Body with clean dual-pass bloom
+      ctx.fillStyle = "rgba(0, 255, 255, 0.35)";
       ctx.beginPath();
-      ctx.arc(astPxX, astPxY, 5, 0, Math.PI * 2);
+      ctx.arc(astPxX, astPxY, 9, 0, Math.PI * 2);
       ctx.fill();
-      ctx.shadowBlur = 0;
+
+      ctx.fillStyle = "#00ffff";
+      ctx.beginPath();
+      ctx.arc(astPxX, astPxY, 4.5, 0, Math.PI * 2);
+      ctx.fill();
 
       // 8. Live Parameters Overlay
       ctx.fillStyle = "rgba(0, 240, 255, 0.9)";
