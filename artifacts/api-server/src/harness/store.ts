@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { logger } from "../lib/logger";
 import type { FixtureRunResult, ResultsSummary } from "./types";
 
+const MAX_STORED_RESULTS = 1000;
 const results: FixtureRunResult[] = [];
 
 export function saveResult(result: Omit<FixtureRunResult, "id" | "created_at">): FixtureRunResult {
@@ -11,6 +12,9 @@ export function saveResult(result: Omit<FixtureRunResult, "id" | "created_at">):
     created_at: new Date().toISOString(),
   };
   results.unshift(stored);
+  if (results.length > MAX_STORED_RESULTS) {
+    results.pop();
+  }
   return stored;
 }
 
