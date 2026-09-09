@@ -3,6 +3,7 @@ import { listFixtures, getFixture } from "../harness/fixtures";
 import { runFixtureById } from "../harness/pipeline";
 import { toPublicFixture } from "../harness/types";
 import { logger } from "../lib/logger";
+import { sanitizeString } from "../lib/sanitize";
 
 const router: IRouter = Router();
 
@@ -27,7 +28,7 @@ router.post("/fixtures/:id/run", async (req, res) => {
     const status = (err as { status?: number }).status ?? 500;
     const message = err instanceof Error ? err.message : String(err);
     logger.error({ err, fixture_id: req.params.id }, "POST /fixtures/:id/run failed");
-    res.status(status).json({ error: message });
+    res.status(status).json({ error: sanitizeString(message) });
   }
 });
 

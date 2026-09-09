@@ -2,6 +2,8 @@ import { logger } from "../../lib/logger";
 import type { Fixture } from "../types";
 import type { CodeGenerationProvider, GenerateOptions } from "./interface";
 
+import { sanitizeString } from "../../lib/sanitize";
+
 // ── shared helper ──────────────────────────────────────────────────────────────
 function extractPython(text: string): string {
   const fenced = text.match(/```(?:python)?\s*([\s\S]*?)```/i);
@@ -57,7 +59,8 @@ export class GroqProvider implements CodeGenerationProvider {
     });
 
     if (!response.ok) {
-      const detail = await response.text();
+      const rawDetail = await response.text();
+      const detail = sanitizeString(rawDetail);
       logger.error(
         { fixture_id: fixture.id, status: response.status, detail: detail.slice(0, 500), provider: "groq" },
         "groq provider: LLM request failed",

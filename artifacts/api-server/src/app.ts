@@ -3,6 +3,7 @@ import cors from "cors";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { sanitizeString } from "./lib/sanitize";
 
 const app: Express = express();
 
@@ -66,7 +67,7 @@ app.use((err: unknown, _req: express.Request, res: express.Response, _next: expr
       process.env["NODE_ENV"] === "production"
         ? "An unexpected error occurred."
         : err instanceof Error
-          ? err.message
+          ? sanitizeString(err.message)
           : "Unknown error",
   });
 });
