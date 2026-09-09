@@ -15,7 +15,7 @@ export function saveResult(result: Omit<FixtureRunResult, "id" | "created_at">):
 }
 
 export function listResults(): FixtureRunResult[] {
-  return results;
+  return [...results];
 }
 
 export function getResult(id: string): FixtureRunResult | undefined {

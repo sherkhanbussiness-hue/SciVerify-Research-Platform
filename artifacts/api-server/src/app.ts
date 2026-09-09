@@ -53,8 +53,8 @@ app.use((err: unknown, _req: express.Request, res: express.Response, next: expre
 app.use("/api", router);
 app.use(router);
 
-// Global 404 handler for unknown API routes
-app.use("/api", (_req: express.Request, res: express.Response) => {
+// Global 404 handler for unknown routes
+app.use((_req: express.Request, res: express.Response) => {
   res.status(404).json({ error: "Endpoint not found" });
 });
 

@@ -8,16 +8,26 @@ import { sanitizeString } from "../lib/sanitize";
 const router: IRouter = Router();
 
 router.get("/fixtures", (_req, res) => {
-  res.json(listFixtures().map(toPublicFixture));
+  try {
+    res.json(listFixtures().map(toPublicFixture));
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to list fixtures";
+    res.status(500).json({ error: "Internal server error", message: sanitizeString(message) });
+  }
 });
 
 router.get("/fixtures/:id", (req, res) => {
-  const fixture = getFixture(req.params.id);
-  if (!fixture) {
-    res.status(404).json({ error: "Fixture not found" });
-    return;
+  try {
+    const fixture = getFixture(req.params.id);
+    if (!fixture) {
+      res.status(404).json({ error: "Fixture not found" });
+      return;
+    }
+    res.json(toPublicFixture(fixture));
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to get fixture";
+    res.status(500).json({ error: "Internal server error", message: sanitizeString(message) });
   }
-  res.json(toPublicFixture(fixture));
 });
 
 router.post("/fixtures/:id/run", async (req, res) => {
