@@ -149,8 +149,46 @@ export async function runFixtureById(id: string): Promise<FixtureRunResult> {
 
     // 3. Sandbox execution + grade ──────────────────────────────────────────
     generated_code = attemptCode;
-    const capture = await runSandboxed(generated_code);
-    const grade = gradeFixture(fixture, capture);
+    let capture: Awaited<ReturnType<typeof runSandboxed>>;
+    let grade: ReturnType<typeof gradeFixture>;
+    try {
+      capture = await runSandboxed(generated_code);
+      grade = gradeFixture(fixture, capture);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      logger.error(
+        { fixture_id: fixture.id, attempt, kind: "execution_failure", stage: "sandbox_runner", message },
+        "execution failure: sandbox execution or grading threw an error",
+      );
+
+      if (attempt === 0) first_attempt_correct = null;
+
+      if (attempt < MAX_RETRIES) continue; // retry
+
+      return saveResult({
+        fixture_id: fixture.id,
+        subdomain: fixture.subdomain,
+        ran: false,
+        correct: null,
+        error: message,
+        output: null,
+        latency_ms: Date.now() - wallStart,
+        generated_code,
+        stdout: "",
+        stderr: message,
+        exit_code: null,
+        timed_out: false,
+        crashed: true,
+        execution_time_ms: 0,
+        model,
+        provider,
+        retry_count,
+        first_attempt_correct,
+        final_correct: null,
+        retrieval_used,
+        retrieved_context,
+      });
+    }
 
     lastCapture = capture;
     lastGrade = grade;
