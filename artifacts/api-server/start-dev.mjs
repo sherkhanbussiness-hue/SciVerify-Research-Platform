@@ -13,7 +13,7 @@ if (existsSync(rootEnv)) {
   } catch {}
 }
 
-process.env.PORT = process.env.PORT ?? "3001";
+process.env.PORT = process.env.PORT || "3001";
 
 // Dynamically import the built entry point so the env var is already set.
 await import("./dist/index.mjs");
