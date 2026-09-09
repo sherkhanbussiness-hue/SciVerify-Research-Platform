@@ -184,6 +184,7 @@ export const FORMULA_DB: FormulaEntry[] = [
  * Tokenises text into lowercase words (letters, digits, hyphens).
  */
 function tokenise(text: string): Set<string> {
+  if (typeof text !== "string" || !text) return new Set();
   const tokens = text.toLowerCase().match(/[a-z0-9][\w-]*/g) ?? [];
   return new Set(tokens);
 }
@@ -196,6 +197,9 @@ export function retrieveFormulas(
   prompt: string,
   maxResults = 4,
 ): FormulaEntry[] {
+  if (typeof prompt !== "string" || !prompt.trim()) {
+    return [];
+  }
   const tokens = tokenise(prompt);
 
   const scored = FORMULA_DB.map((entry) => {

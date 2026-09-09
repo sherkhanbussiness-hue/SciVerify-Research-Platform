@@ -33,8 +33,19 @@ export async function runFixtureById(id: string): Promise<FixtureRunResult> {
   let self_reported_confidence: number | undefined;
 
   // Phase-4: retrieval-grounded generation
-  const retrievedEntries = retrieveFormulas(fixture.prompt);
-  const formattedContext = formatContext(retrievedEntries);
+  let retrievedEntries: ReturnType<typeof retrieveFormulas> = [];
+  let formattedContext = "";
+  try {
+    retrievedEntries = retrieveFormulas(fixture.prompt);
+    formattedContext = formatContext(retrievedEntries);
+  } catch (err) {
+    logger.warn(
+      { fixture_id: fixture.id, err },
+      "retrieval failure: failed to query formula database, proceeding with retrieval_used: false",
+    );
+    retrievedEntries = [];
+    formattedContext = "";
+  }
   const retrieval_used = retrievedEntries.length > 0;
   const retrieved_context = retrievedEntries.map(
     (e) => `[${e.title}] ${e.formula} | ${e.variables}`,
