@@ -38,7 +38,7 @@ router.get("/metrics/calibration", (_req, res) => {
     const allResults = listResults();
 
     const withConfidence = allResults.filter(
-      (r) => typeof r.self_reported_confidence === "number",
+      (r) => typeof r.self_reported_confidence === "number" && Number.isFinite(r.self_reported_confidence),
     );
     const withoutConfidence = allResults.length - withConfidence.length;
 
