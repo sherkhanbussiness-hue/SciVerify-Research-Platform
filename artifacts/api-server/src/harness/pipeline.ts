@@ -5,6 +5,7 @@ import { runSandboxed, confidenceFromOutput } from "./sandbox";
 import { validateScriptSecurity } from "./security";
 import { saveResult } from "./store";
 import { logger } from "../lib/logger";
+import { sanitizeString } from "../lib/sanitize";
 import type { FixtureRunResult } from "./types";
 import { retrieveFormulas, formatContext } from "./retrieval";
 
@@ -69,7 +70,7 @@ export async function runFixtureById(id: string): Promise<FixtureRunResult> {
       agentError = null;
       securityError = null;
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+      const message = sanitizeString(err instanceof Error ? err.message : String(err));
       agentError = message;
       logger.error(
         { fixture_id: fixture.id, attempt, kind: "execution_failure", stage: "agent_runner", message },
@@ -155,7 +156,7 @@ export async function runFixtureById(id: string): Promise<FixtureRunResult> {
       capture = await runSandboxed(generated_code);
       grade = gradeFixture(fixture, capture);
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+      const message = sanitizeString(err instanceof Error ? err.message : String(err));
       logger.error(
         { fixture_id: fixture.id, attempt, kind: "execution_failure", stage: "sandbox_runner", message },
         "execution failure: sandbox execution or grading threw an error",
